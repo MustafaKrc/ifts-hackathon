@@ -1,0 +1,70 @@
+backend/app/routers/create_sprint.py
+  s_06bd48f3f80f0a::t_e7136c9d3d6668 1-78
+backend/app/services/sprint_health_engine.py
+  s_06bd48f3f80f0a::t_9fd89f16347f93 142-144,152-153,155,161-162,164
+  s_06bd48f3f80f0a::t_71bdc3008f6a49 187-189
+  s_06bd48f3f80f0a::t_a6c98fe5b0dd76 240-242
+  s_06bd48f3f80f0a::t_c0471ed2df684f 195-196,198
+  s_06bd48f3f80f0a::t_4f2f0975c9c4a9 173-174,176
+  s_06bd48f3f80f0a::t_fe3831ac453eef 227-229
+  s_06bd48f3f80f0a::t_388d4a320262d0 110,112-117,122-123,126-134
+  s_06bd48f3f80f0a::t_669ed17a3dae9a 209-211
+backend/app/models.py
+  s_06bd48f3f80f0a::t_513c51abdb56ec 318-335
+frontend/src/AppLayout.jsx
+  s_06bd48f3f80f0a::t_82ec1726e59adb 250-263
+  s_06bd48f3f80f0a::t_441c4747f815a5 303
+backend/app/services/llm_decomposition.py
+  s_06bd48f3f80f0a::t_77621d61ff49e6 125
+frontend/src/styles/theme.css
+  s_06bd48f3f80f0a::t_97575515684ae8 374-379,382,384-385,388-391,393,395-397,400-403,406-408,411-415,418-419,422-423
+  s_06bd48f3f80f0a::t_30a16ca4dd171c 505-508
+  s_06bd48f3f80f0a::t_1a273cb348c772 231-273
+backend/app/routers/status.py
+  s_06bd48f3f80f0a::t_229fd01871f9e3 21
+backend/app/main.py
+  s_06bd48f3f80f0a::t_198fa03cc3b233 35
+  s_06bd48f3f80f0a::t_3b2aaab10bb781 130
+frontend/src/api/client.js
+  s_06bd48f3f80f0a::t_b06c6e779cacbb 42-47
+backend/app/services/manager_dashboard_service.py
+  s_06bd48f3f80f0a::t_2adacb22e824b4 212
+frontend/src/pages/PlanningPage.jsx
+  s_06bd48f3f80f0a::t_39a2e351e3af08 1,3-13,18-19,24-25,70-122,126-141,175-206,213-217
+backend/app/integrations/jira_client.py
+  s_06bd48f3f80f0a::t_3436e94d64b2ba 376
+  s_06bd48f3f80f0a::t_ef325c71e16223 395
+backend/app/services/llm_sizing.py
+  s_06bd48f3f80f0a::t_637f902367e8b0 96
+frontend/src/pages/ManagerDashboardPage.jsx
+  s_06bd48f3f80f0a::t_ea4a7ca191f5ff 447-448
+  s_06bd48f3f80f0a::t_fafa9ecd698ea0 40,42,44-63,65-87,89-101,103-132,134-137,139-143
+.env.example
+  s_06bd48f3f80f0a::t_fabfabbe11a153 22
+  s_06bd48f3f80f0a::t_3f414bc8746a95 20-21
+backend/app/services/openai_priority_advisor.py
+  s_06bd48f3f80f0a::t_8a08a8214d2a7a 113
+backend/app/services/simulation_engine.py
+  s_06bd48f3f80f0a::t_621423a1dd3cd3 45-49,59-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2d8fbeb0ca934143bcd62e2a96935b8e0d8348f0",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd48f3f80f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abf822ea-d69c-4373-a517-9916f5bb4eb5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
