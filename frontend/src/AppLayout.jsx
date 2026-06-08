@@ -367,9 +367,9 @@ export default function AppLayout() {
           {!collapsed && (
             <div className="sp-brand-text">
               <Title level={4} className="sp-brand-title">
-                SprintPilot
+                Sprint Mind
               </Title>
-              <Text className="sp-brand-tag">AI Agile Control Tower</Text>
+              <Text className="sp-brand-tag">AI Agile Control Panel</Text>
             </div>
           )}
         </div>
