@@ -37,45 +37,110 @@ const VERDICT_COLOR = {
   Overcommitted: "error",
 };
 
-function PlannedVsDeliveredBar({ planned, delivered }) {
+function PlannedVsDeliveredPie({ planned, delivered }) {
   const safePlanned = Math.max(planned, 1);
+  const missing = Math.max(0, planned - delivered);
   const ratio = Math.min(1, delivered / safePlanned);
+  const ratePct = Math.round(ratio * 100);
+
+  // Donut geometry
+  const size = 200;
+  const stroke = 26;
+  const r = size / 2 - stroke / 2 - 2;
+  const circ = 2 * Math.PI * r;
+  const deliveredArc = circ * (delivered / safePlanned);
+  const missingArc = circ * (missing / safePlanned);
+
+  // Delivered starts at 12 o'clock and sweeps clockwise.
+  // Missing starts where delivered ended.
+  const cx = size / 2;
+  const cy = size / 2;
+  const deliveredStartDeg = -90;
+  const missingStartDeg = -90 + (delivered / safePlanned) * 360;
+
+  const verdictColor =
+    ratePct >= 90 ? "#28A745" : ratePct >= 70 ? "#FFD100" : "#FF6B35";
+
   return (
-    <div className="sp-pvd">
-      <div className="sp-pvd-row">
-        <span className="sp-pvd-label">Planned</span>
-        <div className="sp-pvd-bar">
-          <div
-            className="sp-pvd-fill planned"
-            style={{ width: "100%" }}
+    <div className="sp-pie-wrap">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* Background ring */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke="rgba(0, 48, 135, 0.06)"
+          strokeWidth={stroke}
+        />
+        {/* Delivered slice */}
+        {delivered > 0 && (
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke="#28A745"
+            strokeWidth={stroke}
+            strokeLinecap="butt"
+            strokeDasharray={`${deliveredArc} ${circ}`}
+            transform={`rotate(${deliveredStartDeg} ${cx} ${cy})`}
           />
-        </div>
-        <span className="sp-pvd-value">{planned} SP</span>
-      </div>
-      <div className="sp-pvd-row">
-        <span className="sp-pvd-label">Delivered</span>
-        <div className="sp-pvd-bar">
-          <div
-            className="sp-pvd-fill delivered"
-            style={{ width: `${Math.round(ratio * 100)}%` }}
+        )}
+        {/* Carry-over slice */}
+        {missing > 0 && (
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke="#FF6B35"
+            strokeWidth={stroke}
+            strokeLinecap="butt"
+            strokeDasharray={`${missingArc} ${circ}`}
+            transform={`rotate(${missingStartDeg} ${cx} ${cy})`}
           />
+        )}
+        {/* Center label */}
+        <text
+          x={cx}
+          y={cy - 4}
+          textAnchor="middle"
+          fontSize="34"
+          fontWeight="800"
+          fill={verdictColor}
+          style={{ letterSpacing: "-0.04em" }}
+        >
+          {ratePct}%
+        </text>
+        <text
+          x={cx}
+          y={cy + 22}
+          textAnchor="middle"
+          fontSize="11"
+          fontWeight="700"
+          fill="#003087"
+          style={{ textTransform: "uppercase", letterSpacing: "0.06em" }}
+        >
+          delivery rate
+        </text>
+      </svg>
+      <div className="sp-pie-legend">
+        <div className="sp-pie-legend-row">
+          <span className="sp-pie-dot delivered" />
+          <span>Delivered</span>
+          <span className="sp-pie-legend-value">{delivered} SP</span>
         </div>
-        <span className="sp-pvd-value">
-          {delivered} SP · {Math.round(ratio * 100)}%
-        </span>
+        <div className="sp-pie-legend-row">
+          <span className="sp-pie-dot carryover" />
+          <span>Carried over</span>
+          <span className="sp-pie-legend-value">{missing} SP</span>
+        </div>
+        <div className="sp-pie-legend-row total">
+          <span>Planned total</span>
+          <span className="sp-pie-legend-value">{planned} SP</span>
+        </div>
       </div>
-      {delivered < planned && (
-        <div className="sp-pvd-row missing">
-          <span className="sp-pvd-label">Carried over</span>
-          <div className="sp-pvd-bar">
-            <div
-              className="sp-pvd-fill carryover"
-              style={{ width: `${Math.round((1 - ratio) * 100)}%` }}
-            />
-          </div>
-          <span className="sp-pvd-value">{planned - delivered} SP</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -379,11 +444,8 @@ export default function ManagerDashboardPage() {
           />
 
           {/* Planned vs Delivered */}
-          <Card
-            type="inner"
-            title="Planned vs Delivered (story points)"
-          >
-            <PlannedVsDeliveredBar
+          <Card type="inner" title="Planned vs Delivered (story points)">
+            <PlannedVsDeliveredPie
               planned={dashboard.planned_points}
               delivered={dashboard.delivered_points}
             />

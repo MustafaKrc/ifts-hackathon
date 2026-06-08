@@ -42,6 +42,11 @@ def _risk_score(planning: PlanningResult) -> int:
     return s
 
 
+# What-if scenarios use a 90%-softened penalty so the three options stay
+# inside a readable score band instead of all collapsing to "Overcommitted".
+_SIM_PENALTY_SCALE = 0.1
+
+
 def _build_scenario_for(
     name: str,
     issues: list[JiraIssue],
@@ -51,7 +56,9 @@ def _build_scenario_for(
     trade_off: str,
     why: str,
 ) -> SprintScenario:
-    health = compute_sprint_health(issues, plannings, sequences)
+    health = compute_sprint_health(
+        issues, plannings, sequences, penalty_scale=_SIM_PENALTY_SCALE,
+    )
     capacity_utilization = int(
         round((health.predicted_points / max(health.capacity, 1)) * 100)
     )

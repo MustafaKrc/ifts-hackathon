@@ -93,7 +93,7 @@ def enhance_planning(
         return planning
     if _openai_disabled_reason:
         return planning
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.4")
     prompt = _build_prompt(planning, issue)
     log.info(
         "LLM sizing calibrate %s baseline conf=%d carry=%d size=%d",

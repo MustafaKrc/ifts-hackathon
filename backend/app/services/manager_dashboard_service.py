@@ -209,7 +209,7 @@ def _llm_narrative(payload: dict) -> Optional[str]:
     key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not key or _openai_disabled_reason:
         return None
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.4")
     try:
         from openai import OpenAI
 

@@ -107,14 +107,31 @@ def compute_sprint_health(
     issues: list[JiraIssue],
     plannings: list[PlanningResult],
     sequences: list[TaskSequenceResult],
+    penalty_scale: float = 1.0,
 ) -> SprintHealth:
+    """Compute a sprint-plan health score.
+
+    `penalty_scale` multiplies every deduction. The What-if simulator passes
+    0.1 (10% of normal) so its three scenarios produce gentler, more readable
+    differences. The Sprint Review page keeps the full penalty weight.
+    """
     planned_total = sum((p.original_size or 0) for p in plannings)
     predicted_total = sum(p.predicted_size for p in plannings)
     capacity = _team_capacity()
     log.info(
-        "compute_sprint_health start issues=%d planned=%d predicted=%d free_capacity=%d sequences=%d",
-        len(issues), planned_total, predicted_total, capacity, len(sequences),
+        "compute_sprint_health start issues=%d planned=%d predicted=%d free_capacity=%d sequences=%d penalty_scale=%.2f",
+        len(issues), planned_total, predicted_total, capacity, len(sequences), penalty_scale,
     )
+
+    def _scaled(p: int) -> int:
+        """Apply penalty_scale, round to nearest int, ensure at least 1 if scale>0."""
+        if p <= 0:
+            return 0
+        scaled = p * penalty_scale
+        rounded = int(round(scaled))
+        # Keep at least a 1-point bite at any positive scale so the deduction
+        # actually shows up in the verdict math.
+        return max(1, rounded) if scaled > 0 else 0
 
     risks: list[str] = []
     actions: list[str] = []
@@ -122,8 +139,9 @@ def compute_sprint_health(
     score = 100
 
     if predicted_total > capacity and capacity > 0:
-        score -= 25
-        deductions.append("overcommit -25")
+        d = _scaled(25)
+        score -= d
+        deductions.append(f"overcommit -{d}")
         risks.append(
             f"Predicted effort {predicted_total} SP exceeds remaining team "
             f"capacity {capacity} SP."
@@ -131,17 +149,19 @@ def compute_sprint_health(
         actions.append("Reduce scope or split the largest risky issue.")
 
     high_risk = [p for p in plannings if p.risk_level == "High"]
-    score -= 8 * len(high_risk)
+    d = _scaled(8 * len(high_risk))
+    score -= d
     if high_risk:
-        deductions.append(f"high_risk -{8 * len(high_risk)}")
+        deductions.append(f"high_risk -{d}")
         risks.append(
             f"{len(high_risk)} high-risk issue(s): {', '.join(p.issue_key for p in high_risk)}"
         )
 
     blocked_issues = [i for i in issues if i.blocker_reason or i.status == "Blocked"]
-    score -= 10 * len(blocked_issues)
+    d = _scaled(10 * len(blocked_issues))
+    score -= d
     if blocked_issues:
-        deductions.append(f"blocked -{10 * len(blocked_issues)}")
+        deductions.append(f"blocked -{d}")
     if blocked_issues:
         risks.append(
             f"{len(blocked_issues)} issue(s) blocked: "
@@ -150,9 +170,10 @@ def compute_sprint_health(
         actions.append("Unblock or de-scope blocked issues before sprint starts.")
 
     low_confidence = [p for p in plannings if p.confidence < 55]
-    score -= 6 * len(low_confidence)
+    d = _scaled(6 * len(low_confidence))
+    score -= d
     if low_confidence:
-        deductions.append(f"low_conf -{6 * len(low_confidence)}")
+        deductions.append(f"low_conf -{d}")
     if low_confidence:
         risks.append(
             f"{len(low_confidence)} issue(s) sized with low confidence."
@@ -163,16 +184,18 @@ def compute_sprint_health(
         sum(p.carry_over_risk for p in plannings) / max(len(plannings), 1)
     )
     if avg_carry_over >= 50:
-        score -= 10
-        deductions.append("carry_over -10")
+        d = _scaled(10)
+        score -= d
+        deductions.append(f"carry_over -{d}")
         risks.append(f"Average carry-over risk is {int(avg_carry_over)}%.")
         actions.append("Plan smaller vertical slices to reduce carry-over risk.")
 
     capacity_info = _capacity_breakdown(sequences)
     overloaded = [c for c in capacity_info if c.utilization_percent >= 90]
-    score -= 8 * len(overloaded)
+    d = _scaled(8 * len(overloaded))
+    score -= d
     if overloaded:
-        deductions.append(f"overloaded -{8 * len(overloaded)}")
+        deductions.append(f"overloaded -{d}")
     for c in overloaded:
         risks.append(
             f"{c.member_name} is at {c.utilization_percent}% utilization."
@@ -183,8 +206,9 @@ def compute_sprint_health(
     for seq in sequences:
         longest_path = max(longest_path, len(seq.critical_path))
     if longest_path >= 4:
-        score -= 8
-        deductions.append("critical_path -8")
+        d = _scaled(8)
+        score -= d
+        deductions.append(f"critical_path -{d}")
         risks.append(
             f"Critical path is {longest_path} tasks deep — long serial chain."
         )
@@ -200,8 +224,9 @@ def compute_sprint_health(
             ):
                 near_deadline_not_ready += 1
     if near_deadline_not_ready:
-        score -= 10
-        deductions.append(f"near_deadline_not_ready -{10}")
+        d = _scaled(10)
+        score -= d
+        deductions.append(f"near_deadline_not_ready -{d}")
         risks.append(
             f"{near_deadline_not_ready} task(s) have a deadline within 2 days but are Not Ready."
         )
@@ -212,8 +237,9 @@ def compute_sprint_health(
             test_squeeze = True
             break
     if test_squeeze:
-        score -= 10
-        deductions.append("test_squeeze -10")
+        d = _scaled(10)
+        score -= d
+        deductions.append(f"test_squeeze -{d}")
         risks.append("Test window is squeezed by remaining development workload.")
         actions.append("Move part of a large task to next sprint to free QA time.")
 

@@ -122,7 +122,7 @@ def get_llm_decomposition(
             issue.key, _openai_disabled_reason,
         )
         return None
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.4")
     prompt = _build_prompt(issue, planning, team)
     log.info(
         "LLM decompose calling %s for %s prompt_chars=%d team=%d predicted=%dSP",

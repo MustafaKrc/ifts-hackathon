@@ -315,6 +315,24 @@ class AutoSprintRequest(BaseModel):
     max_tasks: int = 15
 
 
+class CreateSprintRequest(BaseModel):
+    issue_keys: List[str]
+    sprint_name: Optional[str] = None
+    goal: Optional[str] = None
+
+
+class CreateSprintResponse(BaseModel):
+    ok: bool = True
+    mock: bool = True
+    sprint_id: int
+    sprint_name: str
+    issue_count: int
+    total_points: int
+    issue_keys: List[str] = Field(default_factory=list)
+    message: str
+    disclaimer: str = "MOCK response — no Jira create operation was performed."
+
+
 class AutoSprintItem(BaseModel):
     issue_key: str
     title: str

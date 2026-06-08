@@ -110,7 +110,7 @@ def get_openai_sequence(
             issue.key, _openai_disabled_reason,
         )
         return None
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.4")
     prompt = _build_prompt(subtasks, team, issue)
     log.info(
         "OpenAI advisor calling %s for %s prompt_chars=%d subtasks=%d team=%d",

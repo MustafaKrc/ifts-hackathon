@@ -39,3 +39,9 @@ export const postReview = (issueKeys) => post("/api/review", { issue_keys: issue
 export const postSimulate = (issueKeys) => post("/api/simulate", { issue_keys: issueKeys });
 export const getManagerDashboard = (sprintId) =>
   request(`/api/manager-dashboard?sprint_id=${encodeURIComponent(sprintId)}`);
+export const postCreateSprint = (issueKeys, sprintName, goal) =>
+  post("/api/create-sprint", {
+    issue_keys: issueKeys,
+    sprint_name: sprintName || null,
+    goal: goal || null,
+  });

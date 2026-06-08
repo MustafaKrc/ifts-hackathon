@@ -373,7 +373,7 @@ class JiraClient:
             try:
                 data = self._get(
                     f"/rest/agile/1.0/board/{board_id}/backlog",
-                    params={"fields": fields, "maxResults": 100},
+                    params={"fields": fields, "maxResults": 25},
                 )
                 raw_issues = data.get("issues", [])
                 mapped = [self._map_jira_issue(r) for r in raw_issues]
@@ -392,7 +392,7 @@ class JiraClient:
             f'project = "{project_key}" AND sprint is EMPTY '
             f"AND statusCategory != Done ORDER BY priority DESC, duedate ASC"
         )
-        raw_issues = self._search(jql, fields, max_results=100)
+        raw_issues = self._search(jql, fields, max_results=25)
         mapped = [self._map_jira_issue(r) for r in raw_issues]
         log.info("fetch_backlog (JQL fallback) returning %d issues", len(mapped))
         return mapped

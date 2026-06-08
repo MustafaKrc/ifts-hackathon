@@ -228,6 +228,49 @@ body {
   font-weight: 700;
 }
 
+/* ─── Create Sprint bar on Planning page ───────────────────── */
+
+.sp-create-sprint-bar {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.10) 0%, rgba(0, 48, 135, 0.06) 100%);
+  border: 1px solid rgba(40, 167, 69, 0.32);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0, 48, 135, 0.06);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+}
+
+.sp-create-sprint-title {
+  color: var(--turkcell-navy);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.sp-create-sprint-button.ant-btn-primary {
+  background: linear-gradient(135deg, var(--turkcell-green), #2dc451) !important;
+  border: 0;
+  box-shadow: 0 14px 28px rgba(40, 167, 69, 0.36);
+  font-weight: 800;
+  height: 46px;
+  padding-inline: 1.3rem;
+}
+
+.sp-created-stats {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-top: 0.6rem;
+}
+
+.sp-created-stat {
+  background: rgba(0, 48, 135, 0.05);
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+}
+
 /* ─── Auto-sprint summary on Planning page ─────────────────── */
 
 .sp-auto-summary {
@@ -328,54 +371,56 @@ body {
   background: linear-gradient(135deg, rgba(255, 209, 0, 0.10), transparent) !important;
 }
 
-.sp-pvd {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.sp-pvd-row {
+.sp-pie-wrap {
   align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem;
+  justify-content: center;
+}
+
+.sp-pie-legend {
   display: grid;
-  gap: 0.7rem;
-  grid-template-columns: 110px 1fr 150px;
+  gap: 0.45rem;
+  min-width: 220px;
 }
 
-.sp-pvd-label {
+.sp-pie-legend-row {
+  align-items: center;
+  background: rgba(0, 48, 135, 0.04);
+  border-radius: 10px;
   color: var(--turkcell-navy);
+  display: grid;
   font-weight: 700;
+  gap: 0.5rem;
+  grid-template-columns: 16px 1fr auto;
+  padding: 0.45rem 0.7rem;
 }
 
-.sp-pvd-bar {
-  background: rgba(0, 48, 135, 0.07);
-  border-radius: 10px;
-  height: 18px;
-  overflow: hidden;
-  position: relative;
+.sp-pie-legend-row.total {
+  background: rgba(0, 48, 135, 0.08);
+  font-weight: 800;
+  grid-template-columns: 1fr auto;
 }
 
-.sp-pvd-fill {
-  border-radius: 10px;
-  height: 100%;
-  transition: width 250ms ease;
+.sp-pie-legend-value {
+  color: var(--turkcell-navy);
+  font-weight: 800;
 }
 
-.sp-pvd-fill.planned {
-  background: linear-gradient(90deg, var(--turkcell-navy), #0646ad);
+.sp-pie-dot {
+  border-radius: 4px;
+  display: inline-block;
+  height: 12px;
+  width: 12px;
 }
 
-.sp-pvd-fill.delivered {
-  background: linear-gradient(90deg, var(--turkcell-green), #2dc451);
+.sp-pie-dot.delivered {
+  background: var(--turkcell-green);
 }
 
-.sp-pvd-fill.carryover {
-  background: linear-gradient(90deg, var(--turkcell-orange), #ff8d5a);
-}
-
-.sp-pvd-value {
-  color: rgba(26, 26, 46, 0.78);
-  font-weight: 700;
-  text-align: right;
-  font-size: 0.9rem;
+.sp-pie-dot.carryover {
+  background: var(--turkcell-orange);
 }
 
 .sp-assignee-list {
@@ -457,7 +502,10 @@ body {
   color: rgba(26, 26, 46, 0.85);
   font-size: 0.78rem;
   padding: 0.15rem 0.5rem;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+  max-width: 100%;
 }
 
 .sp-assign-chip.is-primary {

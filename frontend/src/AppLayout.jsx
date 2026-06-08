@@ -247,6 +247,20 @@ export default function AppLayout() {
     }
   };
 
+  const handleCreateSprint = async () => {
+    if (selectedKeys.length === 0) return;
+    setLoad("createSprint", true);
+    try {
+      const r = await api.postCreateSprint(selectedKeys);
+      return r;
+    } catch (e) {
+      reportError(e, "Create Sprint failed");
+      return null;
+    } finally {
+      setLoad("createSprint", false);
+    }
+  };
+
   const handleSimulate = async () => {
     if (selectedKeys.length === 0) return;
     setLoad("simulate", true);
@@ -286,6 +300,7 @@ export default function AppLayout() {
     handleMarkRead,
     handleReview,
     handleSimulate,
+    handleCreateSprint,
   };
 
   const menuItems = [
