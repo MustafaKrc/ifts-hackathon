@@ -1,0 +1,79 @@
+frontend/src/pages/ManagerDashboardPage.jsx
+  s_06bd48f3f80f0a::t_d1f6eb9d9a69b4 1-404
+backend/app/services/decomposition_engine.py
+  s_06bd48f3f80f0a::t_55f8c14b057bec 18,27-32
+  s_06bd48f3f80f0a::t_eb4e1988911931 107-206,213-224,227,252-253,255
+frontend/src/components/BacklogPanel.jsx
+  s_06bd48f3f80f0a::t_aa645f14351d43 207-211,214,224-226
+  s_06bd48f3f80f0a::t_f785c002791341 307-316,326
+  s_06bd48f3f80f0a::t_8b74063d9f09b6 26-28
+  s_06bd48f3f80f0a::t_4fdfc58afcbc03 130-173,179,181,184-185
+  s_06bd48f3f80f0a::t_db5d0fb9f24bce 267
+frontend/src/AppRouter.jsx
+  s_06bd48f3f80f0a::t_3356e7ebc16298 10,21
+backend/app/models.py
+  s_06bd48f3f80f0a::t_d3a9a4bf1fb3f5 313-342
+  s_06bd48f3f80f0a::t_f4dc871e570219 356-402
+frontend/src/pages/PlanningPage.jsx
+  s_06bd48f3f80f0a::t_6b0134b02f8051 2-8,12-55,67-81,90-98
+frontend/src/styles/theme.css
+  s_06bd48f3f80f0a::t_5fb7cbd3b85343 155-265
+  s_06bd48f3f80f0a::t_a17dfb5c79299b 311-444
+frontend/src/AppLayout.jsx
+  s_06bd48f3f80f0a::t_8ef18b08e63f1f 17
+  s_06bd48f3f80f0a::t_4890537f8f946b 106-143
+  s_06bd48f3f80f0a::t_115093fb095536 278,281
+  s_06bd48f3f80f0a::t_0f2c59b5e38898 58
+  s_06bd48f3f80f0a::t_e6cd2408e1de35 306-309
+  s_06bd48f3f80f0a::t_a806f2ea50f07c 450-452
+backend/app/services/llm_sizing.py
+  s_06bd48f3f80f0a::t_73fc6ee12f7d19 1-182
+backend/app/services/predictive_sizing.py
+  s_06bd48f3f80f0a::t_db5d474a4e34c5 208
+  s_06bd48f3f80f0a::t_fa67d0ba1c7871 26
+  s_06bd48f3f80f0a::t_bfdb2cf2f5bc2b 298-303
+  s_06bd48f3f80f0a::t_69f49ef6794137 285,304
+backend/app/services/llm_decomposition.py
+  s_06bd48f3f80f0a::t_57e1d707a47e82 1-185
+frontend/src/api/client.js
+  s_06bd48f3f80f0a::t_52214863c02ec5 40-41
+  s_06bd48f3f80f0a::t_bd6ad288adc8a0 31
+backend/app/services/auto_sprint_engine.py
+  s_06bd48f3f80f0a::t_9b07325d129fa2 1-132,135-136,138-178,193-228
+  s_06bd48f3f80f0a::t_706b888fdf75fa 179-192
+  s_06bd48f3f80f0a::t_602fcc5900cb94 133-134,137
+backend/app/main.py
+  s_06bd48f3f80f0a::t_24b2604ee1446f 128
+  s_06bd48f3f80f0a::t_8fbda7790092d6 36
+  s_06bd48f3f80f0a::t_d456e7eb093cf7 127
+  s_06bd48f3f80f0a::t_e225c6a7b5f279 33
+backend/app/routers/manager_dashboard.py
+  s_06bd48f3f80f0a::t_9b936d9389ecb3 1-16
+frontend/src/pages/BacklogPage.jsx
+  s_06bd48f3f80f0a::t_e39b1a68da1fe1 14,16,19-20
+backend/app/routers/auto_sprint.py
+  s_06bd48f3f80f0a::t_6959eb68449b28 1-30
+backend/app/services/manager_dashboard_service.py
+  s_06bd48f3f80f0a::t_65514e86c71b6d 1-390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "80f83ccbdc8ba484fa55bf4ee71176796c8bbd0a",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd48f3f80f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abf822ea-d69c-4373-a517-9916f5bb4eb5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
