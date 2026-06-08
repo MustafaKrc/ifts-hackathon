@@ -1,0 +1,73 @@
+backend/app/services/simulation_engine.py
+  s_06bd48f3f80f0a::t_59ed091f4f56fe 222-233
+  s_06bd48f3f80f0a::t_b5e5ec7cb67103 19,32
+backend/app/main.py
+  s_06bd48f3f80f0a::t_d4057c7433bb16 16-23,28
+  s_06bd48f3f80f0a::t_d9312382dd4d58 1-3,8,24-27,29-31,48,50,64-66,69,73,77-102
+backend/app/services/sprint_health_engine.py
+  s_06bd48f3f80f0a::t_32bed0c1e288b7 125,135,142-143
+  s_06bd48f3f80f0a::t_2efd551d76779d 113-116,120
+  s_06bd48f3f80f0a::t_3eadd6e56246af 154
+  s_06bd48f3f80f0a::t_3142feb5d8514b 166
+  s_06bd48f3f80f0a::t_462f363dd13bb0 12,24
+  s_06bd48f3f80f0a::t_0da47984494982 203
+  s_06bd48f3f80f0a::t_81443205e8cfa7 215,219,228-232
+  s_06bd48f3f80f0a::t_f237983dd46682 186
+  s_06bd48f3f80f0a::t_d1d3fd4aca7023 173-174
+backend/app/services/assignment_engine.py
+  s_06bd48f3f80f0a::t_ffbe2ab7029e1e 11,16
+  s_06bd48f3f80f0a::t_77c6a0f8911895 114-119
+backend/app/services/openai_priority_advisor.py
+  s_06bd48f3f80f0a::t_ce1be7fc321d89 15,21
+  s_06bd48f3f80f0a::t_3edf001adf29c8 23-38
+  s_06bd48f3f80f0a::t_237637e9dae9d2 107-111,122-123
+  s_06bd48f3f80f0a::t_bb1cc38c868665 105,114-118,130,135-158
+  s_06bd48f3f80f0a::t_1a23cdad7bb7cc 159-170
+backend/app/services/task_state_store.py
+  s_06bd48f3f80f0a::t_dec83cb194832d 69-73
+  s_06bd48f3f80f0a::t_54352ae09fc05c 34-38
+  s_06bd48f3f80f0a::t_ac3804968218d5 10,21
+  s_06bd48f3f80f0a::t_0b79a7cbef9932 51,53-54
+backend/app/services/decomposition_engine.py
+  s_06bd48f3f80f0a::t_d4639dd6b80a08 14,27
+  s_06bd48f3f80f0a::t_c2a0f73d3d487d 106-110
+  s_06bd48f3f80f0a::t_bc03621be47929 131-136
+backend/app/services/notification_engine.py
+  s_06bd48f3f80f0a::t_d542c9cd2db11f 14,25
+frontend/src/components/TaskSequencePanel.jsx
+  s_06bd48f3f80f0a::t_0b5b09644ad6ce 148
+backend/app/services/predictive_sizing.py
+  s_06bd48f3f80f0a::t_23e9b26de5e9ac 209-214,227-232,235-238
+  s_06bd48f3f80f0a::t_3c696f8ae3945f 16,27
+  s_06bd48f3f80f0a::t_642c82cd0f38cc 265-269
+backend/app/services/data_provider.py
+  s_06bd48f3f80f0a::t_0d8b5461f8ee40 48,57,63,66,78-81,90-93,99,102
+  s_06bd48f3f80f0a::t_6494cce63db13b 10,19
+backend/app/services/sequencing_engine.py
+  s_06bd48f3f80f0a::t_eb8d5329603951 357-360,370-372,377,382-389
+  s_06bd48f3f80f0a::t_e9f150b5b6c1b6 20,37
+backend/app/integrations/jira_client.py
+  s_06bd48f3f80f0a::t_7d5e5a197fe5b7 12,26
+  s_06bd48f3f80f0a::t_9e39e18117633b 155-158,160-174,180-183,186-187,190,196,198,204,217,219-221,227,238-241,244,249-254,261-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5345d473bd6dace1e7b939b86ae632dd20964cfd",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd48f3f80f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abf822ea-d69c-4373-a517-9916f5bb4eb5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
