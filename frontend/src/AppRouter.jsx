@@ -5,7 +5,6 @@ import AppLayout from "./AppLayout";
 import BacklogPage from "./pages/BacklogPage";
 import PlanningPage from "./pages/PlanningPage";
 import IssueWorkspacePage from "./pages/IssueWorkspacePage";
-import NotificationsPage from "./pages/NotificationsPage";
 import SprintReviewPage from "./pages/SprintReviewPage";
 import ManagerDashboardPage from "./pages/ManagerDashboardPage";
 import SimulatorPage from "./pages/SimulatorPage";
@@ -17,7 +16,6 @@ export default function AppRouter() {
         <Route index element={<BacklogPage />} />
         <Route path="planning" element={<PlanningPage />} />
         <Route path="issue/:issueKey" element={<IssueWorkspacePage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="manager" element={<ManagerDashboardPage />} />
         <Route path="review" element={<SprintReviewPage />} />
         <Route path="simulator" element={<SimulatorPage />} />

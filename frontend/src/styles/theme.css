@@ -487,6 +487,15 @@ body {
   margin-top: 0.25rem;
 }
 
+.sp-am-reason {
+  background: rgba(0, 48, 135, 0.04);
+  border-radius: 8px;
+  color: var(--turkcell-navy);
+  font-size: 0.82rem;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.5rem;
+}
+
 /* ─── Assignment reason chip list ───────────────────────────── */
 
 .sp-assign-reason {

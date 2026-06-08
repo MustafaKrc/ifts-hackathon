@@ -237,6 +237,11 @@ function AchievementsAndMisses({ achievements, misses }) {
                   )}
                 </Space>
                 <div className="sp-am-title">{i.title}</div>
+                {i.carry_over_reason && (
+                  <div className="sp-am-reason">
+                    <RobotOutlined /> <em>{i.carry_over_reason}</em>
+                  </div>
+                )}
                 {i.blocker_reason && (
                   <div className="sp-am-blocker">
                     <WarningOutlined /> {i.blocker_reason}

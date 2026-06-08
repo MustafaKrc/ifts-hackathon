@@ -205,6 +205,82 @@ _NARRATIVE_SYSTEM = (
 )
 
 
+_CARRYOVER_SYSTEM = (
+    "You explain why specific Jira issues were carried over from a sprint. "
+    "For each issue, write a SINGLE concise sentence in the same language as "
+    "the issue title (Turkish if title is Turkish, otherwise English) "
+    "explaining the most likely reason it slipped. Be concrete: cite the "
+    "blocker if present, the slip-count, vagueness of scope, or technical "
+    "complexity. No generic platitudes.\n\n"
+    "Return ONLY valid JSON: "
+    '{"reasons": [{"key": "POS-XXXX", "reason": "<one sentence>"}, ...]}'
+)
+
+
+def _llm_explain_carry_overs(misses: list) -> dict[str, str]:
+    """Batch-ask the LLM why each miss was carried over.
+
+    Returns a map of issue_key -> 1-sentence Turkish/English reason. Empty
+    map if no key, circuit is open, or the call fails.
+    """
+    if not misses:
+        return {}
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key or _openai_disabled_reason:
+        return {}
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.4")
+    user_payload = {
+        "issues": [
+            {
+                "key": m.key,
+                "title": m.title,
+                "points": m.points,
+                "status": m.status,
+                "assignee": m.assignee_name,
+                "slipped_to_future_sprints": m.follow_on_sprints,
+                "blocker": m.blocker_reason,
+            }
+            for m in misses
+        ]
+    }
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=key, max_retries=0)
+        response = client.chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": _CARRYOVER_SYSTEM},
+                {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+            ],
+            timeout=20,
+        )
+        content = response.choices[0].message.content or ""
+        log.info(
+            "manager carry-over reasons LLM tokens=%s for %d issue(s)",
+            getattr(response.usage, "total_tokens", "?"), len(misses),
+        )
+        payload = json.loads(content)
+        out: dict[str, str] = {}
+        for row in payload.get("reasons") or []:
+            k = (row.get("key") or "").strip()
+            r = (row.get("reason") or "").strip()
+            if k and r:
+                out[k] = r
+        return out
+    except Exception as e:
+        name = type(e).__name__
+        log.error("manager carry-over reasons LLM failed: %s: %s", name, str(e)[:200])
+        if name in {
+            "RateLimitError", "AuthenticationError", "NotFoundError",
+            "PermissionDeniedError", "BadRequestError",
+        }:
+            _disable(f"{name}: {str(e)[:120]}")
+        return {}
+
+
 def _llm_narrative(payload: dict) -> Optional[str]:
     key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not key or _openai_disabled_reason:
@@ -308,6 +384,30 @@ def build_manager_dashboard(sprint_id: int) -> Optional[ManagerDashboardResponse
     top_misses = sorted(
         (i for i in issues if not i.is_delivered), key=lambda i: (-i.follow_on_sprints, -i.points)
     )[:5]
+
+    # Ask the LLM (one batched call) why each top miss was carried over so the
+    # dashboard can show a real reason per item instead of a generic note.
+    reasons = _llm_explain_carry_overs(top_misses)
+    if reasons:
+        for m in top_misses:
+            if m.key in reasons:
+                m.carry_over_reason = reasons[m.key]
+    # Deterministic fallback for items the LLM didn't cover
+    for m in top_misses:
+        if not m.carry_over_reason:
+            if m.blocker_reason:
+                m.carry_over_reason = (
+                    f"Blocked: {m.blocker_reason}"
+                )
+            elif m.follow_on_sprints >= 2:
+                m.carry_over_reason = (
+                    f"Has slipped into {m.follow_on_sprints} later sprints — "
+                    "likely scope or specification problem."
+                )
+            else:
+                m.carry_over_reason = (
+                    "Did not finish within the sprint window; review scope and capacity."
+                )
 
     narrative_payload = {
         "sprint": sprint.name,

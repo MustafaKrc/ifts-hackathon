@@ -393,6 +393,7 @@ class DashboardIssue(BaseModel):
     is_delivered: bool
     follow_on_sprints: int = 0  # how many future sprints contain this issue
     blocker_reason: Optional[str] = None
+    carry_over_reason: Optional[str] = None  # AI-generated explanation
 
 
 class ManagerDashboardResponse(BaseModel):

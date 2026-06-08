@@ -12,7 +12,6 @@ import {
 } from "antd";
 import {
   ApiOutlined,
-  BellOutlined,
   CloudOutlined,
   CrownOutlined,
   ExperimentOutlined,
@@ -310,12 +309,6 @@ export default function AppLayout() {
       icon: <RobotOutlined />,
       label: "Planning",
       badge: planning.length || null,
-    },
-    {
-      key: "/notifications",
-      icon: <BellOutlined />,
-      label: "Notifications",
-      badge: unreadCount || null,
     },
     {
       key: "/manager",
