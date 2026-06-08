@@ -14,6 +14,7 @@ import {
   ApiOutlined,
   BellOutlined,
   CloudOutlined,
+  CrownOutlined,
   ExperimentOutlined,
   FundOutlined,
   HomeOutlined,
@@ -54,6 +55,7 @@ export default function AppLayout() {
   const [notifications, setNotifications] = useState([]);
   const [sprintReview, setSprintReview] = useState(null);
   const [simulation, setSimulation] = useState(null);
+  const [autoSprint, setAutoSprint] = useState(null);
 
   const [loading, setLoading] = useState({});
   const [completing, setCompleting] = useState(null);
@@ -100,6 +102,44 @@ export default function AppLayout() {
       }
     })();
   }, [reportError]);
+
+  const handleAutoSprint = async () => {
+    setLoad("autoSprint", true);
+    try {
+      const r = await api.postAutoSprint({});
+      const plannings = r.plannings || [];
+      const issueKeys = r.issue_keys || [];
+      const decomps = {};
+      for (const d of r.decompositions || []) {
+        decomps[d.issue_key] = d;
+      }
+      setSelectedKeys(issueKeys);
+      setPlanning(plannings);
+      setPlanningMeta({
+        backlog: r.backlog_source,
+        history: r.history_source,
+        count: undefined,
+      });
+      setDecompositions((prev) => ({ ...prev, ...decomps }));
+      setAutoSprint({
+        selected: r.selected || [],
+        used_capacity: r.used_capacity,
+        target_capacity: r.target_capacity,
+        candidate_pool_size: r.candidate_pool_size,
+        backlog_size: r.backlog_size,
+        summary: r.summary,
+        used_openai_decomposition: r.used_openai_decomposition,
+      });
+      message.success(
+        `AI auto-built sprint: ${issueKeys.length} task(s), ${r.used_capacity}/${r.target_capacity} SP`,
+      );
+      navigate("/planning");
+    } catch (e) {
+      reportError(e, "Auto-build failed");
+    } finally {
+      setLoad("autoSprint", false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (selectedKeys.length === 0) return;
@@ -235,8 +275,10 @@ export default function AppLayout() {
     notifications,
     sprintReview,
     simulation,
+    autoSprint,
     loading,
     completing,
+    handleAutoSprint,
     handleAnalyze,
     handleDecompose,
     handleSequence,
@@ -259,6 +301,11 @@ export default function AppLayout() {
       icon: <BellOutlined />,
       label: "Notifications",
       badge: unreadCount || null,
+    },
+    {
+      key: "/manager",
+      icon: <CrownOutlined />,
+      label: "Manager Dashboard",
     },
     {
       key: "/review",
@@ -400,7 +447,8 @@ function pageTitle(path, decompositions, sequences) {
     return `3. Issue Workspace · ${key}`;
   }
   if (path === "/notifications") return "4. Ready-to-Start Notifications";
-  if (path === "/review") return "5. Sprint Review Dashboard";
-  if (path === "/simulator") return "6. What-if Sprint Simulator";
+  if (path === "/manager") return "Manager Dashboard";
+  if (path === "/review") return "Sprint Plan Review";
+  if (path === "/simulator") return "What-if Sprint Simulator";
   return "SprintPilot";
 }

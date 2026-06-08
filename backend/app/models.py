@@ -310,6 +310,36 @@ class DecompositionResult(BaseModel):
     subtasks: List[SubTask] = Field(default_factory=list)
 
 
+class AutoSprintRequest(BaseModel):
+    target_capacity: Optional[int] = None
+    max_tasks: int = 15
+
+
+class AutoSprintItem(BaseModel):
+    issue_key: str
+    title: str
+    predicted_size: int
+    confidence: int
+    risk_level: RiskLevel
+    carry_over_count: int = 0
+    priority: IssuePriority
+    inclusion_score: int
+    inclusion_reasons: List[str] = Field(default_factory=list)
+
+
+class AutoSprintResult(BaseModel):
+    selected: List[AutoSprintItem] = Field(default_factory=list)
+    issue_keys: List[str] = Field(default_factory=list)
+    plannings: List[PlanningResult] = Field(default_factory=list)
+    decompositions: List[DecompositionResult] = Field(default_factory=list)
+    used_capacity: int = 0
+    target_capacity: int = 0
+    candidate_pool_size: int = 0
+    backlog_size: int = 0
+    summary: str = ""
+    used_openai_decomposition: bool = False
+
+
 # Status/meta endpoints
 class StatusInfo(BaseModel):
     jira_connected: bool
@@ -323,3 +353,50 @@ class SprintsResponse(BaseModel):
     sprints: List[Sprint] = Field(default_factory=list)
     source: Literal["jira", "fallback"]
     reason: Optional[str] = None
+
+
+# Manager dashboard models
+class DashboardAssignee(BaseModel):
+    assignee_id: str
+    assignee_name: str
+    planned_points: int
+    delivered_points: int
+    issues_planned: int
+    issues_delivered: int
+    delivery_rate: float
+
+
+class DashboardIssue(BaseModel):
+    key: str
+    title: str
+    points: int
+    status: str
+    assignee_name: Optional[str] = None
+    is_delivered: bool
+    follow_on_sprints: int = 0  # how many future sprints contain this issue
+    blocker_reason: Optional[str] = None
+
+
+class ManagerDashboardResponse(BaseModel):
+    sprint_id: int
+    sprint_name: str
+    sprint_state: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    planned_points: int
+    delivered_points: int
+    delivery_rate: float
+    planned_issues: int
+    delivered_issues: int
+    carry_over_count: int
+    carry_over_points: int
+    carry_over_rate: float
+    cross_sprint_transition_rate: float  # avg follow-on sprints across misses
+    health_score: int
+    health_verdict: SprintVerdict
+    per_assignee: List[DashboardAssignee] = Field(default_factory=list)
+    top_achievements: List[DashboardIssue] = Field(default_factory=list)
+    top_misses: List[DashboardIssue] = Field(default_factory=list)
+    narrative: str
+    used_openai: bool = False
+    source: Literal["jira", "fallback"] = "jira"

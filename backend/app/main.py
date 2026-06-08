@@ -30,8 +30,10 @@ logging.basicConfig(
 log = logging.getLogger("sprintpilot")
 
 from .routers import (  # noqa: E402  (env must load before routers init clients)
+    auto_sprint,
     backlog,
     decompose,
+    manager_dashboard,
     notifications,
     planning,
     review,
@@ -122,5 +124,7 @@ for router in (
     review.router,
     simulate.router,
     status.router,
+    auto_sprint.router,
+    manager_dashboard.router,
 ):
     app.include_router(router)

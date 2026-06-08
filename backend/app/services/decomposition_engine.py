@@ -15,6 +15,7 @@ import logging
 from datetime import date, timedelta
 from typing import Optional
 
+from ..data.mock_team import find_by_id
 from ..models import (
     DecompositionResult,
     JiraIssue,
@@ -23,7 +24,12 @@ from ..models import (
     TeamMember,
     TeamPerformance,
 )
-from .assignment_engine import assign_subtask
+from .assignment_engine import (
+    AssignmentSuggestion,
+    _overload_risk,
+    assign_subtask,
+)
+from .llm_decomposition import get_llm_decomposition
 
 log = logging.getLogger("sprintpilot.decompose")
 
@@ -98,18 +104,129 @@ def _staggered_deadline(parent: Optional[date], index: int, total: int) -> Optio
     return parent - timedelta(days=days_before) if days_before > 0 else parent
 
 
+_VALID_TYPES = {"Analysis", "DB", "Backend", "Frontend", "Test"}
+
+
+def _from_llm_payload(
+    payload: dict,
+    issue: JiraIssue,
+    planning: PlanningResult,
+    team: list[TeamMember],
+    performance: list[TeamPerformance] | None,
+) -> DecompositionResult | None:
+    raw_subtasks = payload.get("subtasks") or []
+    if not raw_subtasks:
+        return None
+
+    used_suffixes: set[str] = set()
+    subtasks: list[SubTask] = []
+    total_types = len(raw_subtasks)
+
+    for i, raw in enumerate(raw_subtasks):
+        raw_type = (raw.get("type") or "").strip()
+        if raw_type not in _VALID_TYPES:
+            log.warning(
+                "decompose %s: LLM returned invalid type=%s — skipping subtask",
+                issue.key, raw_type,
+            )
+            continue
+        try:
+            size = max(1, int(raw.get("estimated_size") or 1))
+        except (TypeError, ValueError):
+            size = max(1, planning.predicted_size // max(total_types, 1))
+
+        # Suffix must be unique even if LLM emits two of the same type
+        base = _suffix(raw_type)
+        suffix = base
+        n = 2
+        while suffix in used_suffixes:
+            suffix = f"{base}{n}"
+            n += 1
+        used_suffixes.add(suffix)
+        subtask_id = f"{issue.key}-{suffix}"
+
+        # Try LLM's suggested assignee. Validate it exists in the team.
+        llm_assignee_id = (raw.get("suggested_assignee_id") or "").strip() or None
+        llm_member = find_by_id(llm_assignee_id) if llm_assignee_id else None
+        if llm_member:
+            risk = _overload_risk(llm_member, size)
+            reason = (
+                f"chosen by AI: {raw.get('reason') or ''}".strip().rstrip(":")
+                or f"AI selected {llm_member.name} for this {raw_type} task"
+            )
+            assignee_id = llm_member.id
+            assignee_name = llm_member.name
+        else:
+            # Defer to deterministic assignment engine
+            suggestion: AssignmentSuggestion = assign_subtask(
+                raw_type, size, team, performance
+            )
+            assignee_id = suggestion.assignee_id
+            assignee_name = suggestion.assignee_name
+            risk = suggestion.overload_risk
+            reason = suggestion.reason
+
+        deadline = _staggered_deadline(issue.deadline, i, total_types)
+        title = (raw.get("title") or _subtask_title(issue, raw_type)).strip()
+
+        subtasks.append(
+            SubTask(
+                id=subtask_id,
+                parent_issue_key=issue.key,
+                title=title,
+                type=raw_type,  # type: ignore[arg-type]
+                estimated_size=size,
+                suggested_assignee_id=assignee_id,
+                suggested_assignee_name=assignee_name,
+                assignment_reason=reason,
+                overload_risk=risk,
+                deadline=deadline,
+            )
+        )
+        log.info(
+            "decompose %s LLM subtask=%s type=%s size=%d assignee=%s overload=%s",
+            issue.key, subtask_id, raw_type, size, assignee_name, risk,
+        )
+
+    if not subtasks:
+        return None
+
+    if payload.get("should_decompose") is False:
+        log.info(
+            "decompose %s LLM said atomic: '%s'",
+            issue.key, payload.get("rationale") or "(no rationale)",
+        )
+    else:
+        log.info(
+            "decompose %s LLM produced %d subtasks: %s",
+            issue.key, len(subtasks), payload.get("rationale") or "(no rationale)",
+        )
+    return DecompositionResult(issue_key=issue.key, subtasks=subtasks)
+
+
 def decompose(
     issue: JiraIssue,
     planning: PlanningResult,
     team: list[TeamMember],
     performance: list[TeamPerformance] | None = None,
 ) -> DecompositionResult:
+    # 1. Try LLM-driven decomposition first.
+    payload = get_llm_decomposition(issue, planning, team)
+    if payload:
+        llm_result = _from_llm_payload(payload, issue, planning, team, performance)
+        if llm_result:
+            return llm_result
+        log.warning(
+            "decompose %s: LLM payload unusable, falling back to deterministic",
+            issue.key,
+        )
+
+    # 2. Deterministic fallback — signal-driven type selection.
     types = _choose_types(issue)
     log.info(
-        "decompose %s parent_size=%d -> chose types=%s (signals: needs_ac=%s needs_db=%s needs_fe=%s) perf_rows=%s",
+        "decompose %s parent_size=%d -> deterministic types=%s (signals: needs_ac=%s needs_db=%s needs_fe=%s)",
         issue.key, planning.predicted_size, types,
         _needs_analysis(issue), _needs_db(issue), _needs_frontend(issue),
-        len(performance) if performance else 0,
     )
     subtasks: list[SubTask] = []
     for i, t in enumerate(types):
@@ -132,11 +249,10 @@ def decompose(
             )
         )
         log.info(
-            "decompose %s subtask=%s type=%s size=%d assignee=%s overload=%s deadline=%s",
-            issue.key, subtask_id, t, size, suggested.assignee_name,
-            suggested.overload_risk, deadline,
+            "decompose %s deterministic subtask=%s type=%s size=%d assignee=%s overload=%s",
+            issue.key, subtask_id, t, size, suggested.assignee_name, suggested.overload_risk,
         )
-    log.info("decompose %s produced %d subtasks total", issue.key, len(subtasks))
+    log.info("decompose %s deterministic produced %d subtasks", issue.key, len(subtasks))
     return DecompositionResult(issue_key=issue.key, subtasks=subtasks)
 
 

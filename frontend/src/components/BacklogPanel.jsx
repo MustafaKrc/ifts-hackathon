@@ -10,7 +10,6 @@ import {
   Space,
   Select,
   Input,
-  Switch,
   Divider,
 } from "antd";
 import {
@@ -24,6 +23,9 @@ import {
   ClockCircleOutlined,
   SearchOutlined,
   RetweetOutlined,
+  RobotOutlined,
+  StarFilled,
+  RocketOutlined,
 } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
@@ -92,13 +94,6 @@ function IssueCard({ issue, checked, onToggle }) {
             </Tag>
           </Tooltip>
         )}
-        {issue.blocker_reason && (
-          <Tooltip title={issue.blocker_reason}>
-            <Tag color="error" icon={<WarningOutlined />}>
-              Blocked
-            </Tag>
-          </Tooltip>
-        )}
       </div>
       <Title level={5} className="sp-issue-title">
         {issue.title}
@@ -127,10 +122,51 @@ function IssueCard({ issue, checked, onToggle }) {
             {c}
           </Tag>
         ))}
-        {issue.acceptance_criteria == null && (
-          <Tag color="orange">AC missing</Tag>
-        )}
       </Space>
+    </div>
+  );
+}
+
+function AutoSprintBanner({ onAutoSprint, autoLoading, backlogCount, teamSize, lastAutoSprint }) {
+  return (
+    <div className="sp-auto-banner">
+      <div className="sp-auto-banner-left">
+        <RocketOutlined className="sp-auto-banner-icon" />
+        <div>
+          <div className="sp-auto-banner-title">
+            <StarFilled /> AI Auto-Build Next Sprint
+          </div>
+          <div className="sp-auto-banner-sub">
+            Skip manual picking. SprintPilot scans the {backlogCount}-item backlog,
+            scores each on priority · carryover · deadline · fit, sizes them from
+            history, and decomposes each via LLM with skill-matrix-aware assignment
+            for the team of {teamSize}.
+          </div>
+        </div>
+      </div>
+      <div className="sp-auto-banner-right">
+        <Button
+          type="primary"
+          size="large"
+          icon={<RocketOutlined />}
+          loading={autoLoading}
+          onClick={onAutoSprint}
+          className="sp-auto-banner-button"
+        >
+          {autoLoading ? "Building sprint…" : "Auto-Build Next Sprint"}
+        </Button>
+        {lastAutoSprint && !autoLoading && (
+          <div className="sp-auto-banner-status">
+            Last build: {lastAutoSprint.selected?.length || 0} task(s) ·{" "}
+            {lastAutoSprint.used_capacity}/{lastAutoSprint.target_capacity} SP
+            {lastAutoSprint.used_openai_decomposition && (
+              <Tag color="processing" style={{ marginLeft: 6 }}>
+                <RobotOutlined /> LLM-decomposed
+              </Tag>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -140,9 +176,13 @@ export default function BacklogPanel({
   selected,
   onSelect,
   onAnalyze,
+  onAutoSprint,
   loading,
+  autoLoading,
   source,
   fallbackReason,
+  teamSize = 0,
+  lastAutoSprint,
 }) {
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
@@ -150,38 +190,7 @@ export default function BacklogPanel({
   const [carryoverFilter, setCarryoverFilter] = useState([]);
   const [priorityFilter, setPriorityFilter] = useState([]);
   const [statusFilter, setStatusFilter] = useState([]);
-  const [pastSprintFilter, setPastSprintFilter] = useState([]);
   const [searchText, setSearchText] = useState("");
-  const [onlyBlockers, setOnlyBlockers] = useState(false);
-  const [onlyAcMissing, setOnlyAcMissing] = useState(false);
-
-  const pastSprintOptions = useMemo(() => {
-    const seen = new Set();
-    const list = [];
-    for (const i of issues) {
-      for (const s of i.sprint_history || []) {
-        if (!seen.has(s.name)) {
-          seen.add(s.name);
-          list.push({ id: s.id, name: s.name, state: s.state });
-        }
-      }
-    }
-    list.sort((a, b) => (b.id || 0) - (a.id || 0));
-    return list.slice(0, 40).map((s) => ({
-      value: s.name,
-      label: (
-        <Space>
-          <span>{s.name}</span>
-          <Tag
-            color={SPRINT_STATE_COLOR[s.state] || "default"}
-            style={{ marginInlineEnd: 0 }}
-          >
-            {s.state}
-          </Tag>
-        </Space>
-      ),
-    }));
-  }, [issues]);
 
   const matchesCarryover = (issue, filters) => {
     if (!filters.length) return true;
@@ -195,32 +204,31 @@ export default function BacklogPanel({
     });
   };
 
+  const _numFromKey = (key) => {
+    const m = (key || "").match(/(\d+)$/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+
   const filtered = useMemo(() => {
     const search = searchText.trim().toLowerCase();
-    return issues.filter((i) => {
+    const list = issues.filter((i) => {
       if (!matchesCarryover(i, carryoverFilter)) return false;
       if (priorityFilter.length && !priorityFilter.includes(i.priority)) return false;
       if (statusFilter.length && !statusFilter.includes(i.status)) return false;
-      if (pastSprintFilter.length) {
-        const names = (i.sprint_history || []).map((s) => s.name);
-        if (!pastSprintFilter.some((p) => names.includes(p))) return false;
-      }
-      if (onlyBlockers && !i.blocker_reason) return false;
-      if (onlyAcMissing && i.acceptance_criteria) return false;
       if (search) {
         const haystack = `${i.key} ${i.title} ${i.description || ""}`.toLowerCase();
         if (!haystack.includes(search)) return false;
       }
       return true;
     });
+    // Sort by key descending (newest issues first; natural numeric sort)
+    list.sort((a, b) => _numFromKey(b.key) - _numFromKey(a.key));
+    return list;
   }, [
     issues,
     carryoverFilter,
     priorityFilter,
     statusFilter,
-    pastSprintFilter,
-    onlyBlockers,
-    onlyAcMissing,
     searchText,
   ]);
 
@@ -241,10 +249,7 @@ export default function BacklogPanel({
     setCarryoverFilter([]);
     setPriorityFilter([]);
     setStatusFilter([]);
-    setPastSprintFilter([]);
     setSearchText("");
-    setOnlyBlockers(false);
-    setOnlyAcMissing(false);
   };
 
   const selectAllVisible = () => {
@@ -259,10 +264,7 @@ export default function BacklogPanel({
     carryoverFilter.length +
       priorityFilter.length +
       statusFilter.length +
-      pastSprintFilter.length +
-      (searchText ? 1 : 0) +
-      (onlyBlockers ? 1 : 0) +
-      (onlyAcMissing ? 1 : 0) >
+      (searchText ? 1 : 0) >
     0;
 
   return (
@@ -302,6 +304,16 @@ export default function BacklogPanel({
         </Paragraph>
       )}
 
+      {onAutoSprint && (
+        <AutoSprintBanner
+          onAutoSprint={onAutoSprint}
+          autoLoading={autoLoading}
+          backlogCount={issues.length}
+          teamSize={teamSize}
+          lastAutoSprint={lastAutoSprint}
+        />
+      )}
+
       <Paragraph type="secondary" className="sp-hint" style={{ marginBottom: 8 }}>
         <strong>Jira project backlog</strong> — items not yet in the active sprint.{" "}
         {carryoverCount > 0 && (
@@ -311,6 +323,7 @@ export default function BacklogPanel({
           </span>
         )}{" "}
         Closed sprints feed the predictive sizing + person-based assignment engines.
+        Or hit <strong>Auto-Build</strong> and skip manual selection.
       </Paragraph>
 
       <div className="sp-filter-bar">
@@ -352,34 +365,6 @@ export default function BacklogPanel({
           options={STATUS_OPTIONS}
           style={{ minWidth: 160 }}
         />
-        <Select
-          mode="multiple"
-          allowClear
-          maxTagCount="responsive"
-          placeholder="Past sprint"
-          value={pastSprintFilter}
-          onChange={setPastSprintFilter}
-          options={pastSprintOptions}
-          style={{ minWidth: 180 }}
-          showSearch
-          optionFilterProp="value"
-        />
-        <Space size={6}>
-          <Switch
-            checked={onlyBlockers}
-            onChange={setOnlyBlockers}
-            size="small"
-          />
-          <Text>Blockers only</Text>
-        </Space>
-        <Space size={6}>
-          <Switch
-            checked={onlyAcMissing}
-            onChange={setOnlyAcMissing}
-            size="small"
-          />
-          <Text>AC missing</Text>
-        </Space>
         {filtersActive && (
           <Button
             type="link"

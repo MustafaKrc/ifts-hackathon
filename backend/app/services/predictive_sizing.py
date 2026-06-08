@@ -23,6 +23,7 @@ from ..models import (
     PlanningResult,
     SimilarIssueEvidence,
 )
+from .llm_sizing import enhance_planning
 
 log = logging.getLogger("sprintpilot.sizing")
 
@@ -204,7 +205,7 @@ def _blocker_suggestions(issue: JiraIssue) -> list[str]:
 
 
 def predict_size(
-    issue: JiraIssue, history: list[HistoricalIssue]
+    issue: JiraIssue, history: list[HistoricalIssue], use_llm: bool = True,
 ) -> PlanningResult:
     log.info(
         "predict_size %s priority=%s labels=%s components=%s has_ac=%s has_blocker=%s deps=%d history_pool=%d",
@@ -281,7 +282,7 @@ def predict_size(
         for s, h in top
     ]
 
-    return PlanningResult(
+    baseline = PlanningResult(
         issue_key=issue.key,
         title=issue.title,
         original_size=issue.current_size,
@@ -293,6 +294,14 @@ def predict_size(
         similar_issues=similar_evidence,
         carry_over_risk=carry_over,
     )
+
+    # LLM calibration layer: only fires when OPENAI_API_KEY is configured,
+    # the shared circuit is healthy, AND the caller opted in. Falls back to
+    # baseline on any failure. Bulk pipelines (auto-sprint candidate scan)
+    # disable this to avoid paying for 30+ LLM calls per build.
+    if not use_llm:
+        return baseline
+    return enhance_planning(baseline, issue)
 
 
 def _evidence_reason(issue: JiraIssue, hist: HistoricalIssue, sim: float) -> str:

@@ -28,6 +28,7 @@ export const getBacklog = () => request("/api/backlog");
 export const getTeam = () => request("/api/team");
 export const getTeamPerformance = () => request("/api/team-performance");
 export const getSprints = () => request("/api/sprints");
+export const postAutoSprint = (opts = {}) => post("/api/auto-sprint", opts);
 export const postPlanning = (issueKeys) => post("/api/planning", { issue_keys: issueKeys });
 export const postDecompose = (issueKey) => post("/api/decompose", { issue_key: issueKey });
 export const postSequence = (issueKey) => post("/api/sequence", { issue_key: issueKey });
@@ -36,3 +37,5 @@ export const getNotifications = () => request("/api/notifications");
 export const postMarkRead = (notificationId) => post("/api/notifications/read", { notification_id: notificationId });
 export const postReview = (issueKeys) => post("/api/review", { issue_keys: issueKeys });
 export const postSimulate = (issueKeys) => post("/api/simulate", { issue_keys: issueKeys });
+export const getManagerDashboard = (sprintId) =>
+  request(`/api/manager-dashboard?sprint_id=${encodeURIComponent(sprintId)}`);
