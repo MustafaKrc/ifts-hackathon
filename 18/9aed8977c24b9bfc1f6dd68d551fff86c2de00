@@ -1,0 +1,31 @@
+backend/app/models.py
+  s_06bd48f3f80f0a::t_3009eb4057ee05 396
+frontend/src/styles/theme.css
+  s_06bd48f3f80f0a::t_2aad483d1ec90a 490-498
+backend/app/services/manager_dashboard_service.py
+  s_06bd48f3f80f0a::t_fd78b459c39409 208-283
+  s_06bd48f3f80f0a::t_52854281fc701b 388-411
+frontend/src/pages/ManagerDashboardPage.jsx
+  s_06bd48f3f80f0a::t_3ca674392f0743 240-244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "189aed8977c24b9bfc1f6dd68d551fff86c2de00",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd48f3f80f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abf822ea-d69c-4373-a517-9916f5bb4eb5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
