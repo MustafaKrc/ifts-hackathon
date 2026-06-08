@@ -8,9 +8,57 @@ import {
   Tooltip,
   Empty,
 } from "antd";
-import { UserOutlined, CalendarOutlined } from "@ant-design/icons";
+import {
+  UserOutlined,
+  CalendarOutlined,
+  IdcardOutlined,
+  StarOutlined,
+  HistoryOutlined,
+  ApartmentOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
 
 const { Text, Paragraph } = Typography;
+
+function classifyChip(clause) {
+  const lower = clause.toLowerCase();
+  if (lower.includes("role")) return { icon: <ApartmentOutlined />, primary: true };
+  if (
+    lower.includes("senior") ||
+    lower.includes("junior") ||
+    lower.includes("mid") ||
+    lower.includes("lead") ||
+    lower.includes("principal") ||
+    lower.includes("exp")
+  )
+    return { icon: <IdcardOutlined /> };
+  if (lower.includes("proficiency")) return { icon: <StarOutlined /> };
+  if (lower.includes("delivered") || lower.includes("historical"))
+    return { icon: <HistoryOutlined /> };
+  if (lower.includes("capacity") || lower.includes("overload"))
+    return { icon: <ThunderboltOutlined /> };
+  return { icon: null };
+}
+
+function AssignmentReason({ reason }) {
+  if (!reason) return null;
+  const parts = reason
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return (
+    <div className="sp-assign-reason">
+      {parts.map((p, i) => {
+        const meta = classifyChip(p);
+        return (
+          <span key={i} className={`sp-assign-chip ${meta.primary ? "is-primary" : ""}`}>
+            {meta.icon} {p}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 const TYPE_COLORS = {
   Analysis: "purple",
@@ -67,13 +115,11 @@ export default function TaskDecompositionPanel({
                 </Space>
               </div>
               <Tooltip title="Why this assignee?">
-                <Paragraph
-                  className="sp-subtask-reason"
-                  ellipsis={{ rows: 2, expandable: true, symbol: "more" }}
-                >
-                  {s.assignment_reason}
-                </Paragraph>
+                <div className="sp-subtask-reason-label">
+                  <Text strong>Why this assignee?</Text>
+                </div>
               </Tooltip>
+              <AssignmentReason reason={s.assignment_reason} />
             </Card>
           ))}
         </div>

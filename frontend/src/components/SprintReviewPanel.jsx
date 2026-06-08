@@ -15,6 +15,9 @@ import {
   FundOutlined,
   TeamOutlined,
   FileTextOutlined,
+  RetweetOutlined,
+  WarningOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -87,6 +90,86 @@ function CapacityPanel({ rows }) {
             </Text>
           </div>
         ))}
+      </div>
+    </Card>
+  );
+}
+
+function CarryoverWatch({ items }) {
+  if (!items || items.length === 0) {
+    return (
+      <Card
+        type="inner"
+        title={
+          <Space>
+            <RetweetOutlined /> Carry-over Watch
+          </Space>
+        }
+      >
+        <Text type="secondary">
+          No carry-over items in this sprint plan. Clean slate.
+        </Text>
+      </Card>
+    );
+  }
+  return (
+    <Card
+      type="inner"
+      title={
+        <Space>
+          <RetweetOutlined /> Carry-over Watch
+          <Tag color="warning">{items.length} item(s)</Tag>
+        </Space>
+      }
+    >
+      <Paragraph type="secondary" style={{ marginBottom: 12 }}>
+        These backlog items have already slipped from past sprints. Investigate
+        before committing them again.
+      </Paragraph>
+      <div className="sp-carryover-list">
+        {items.map((c) => {
+          const sev =
+            c.carry_over_count >= 3
+              ? "error"
+              : c.carry_over_count === 2
+              ? "volcano"
+              : "warning";
+          return (
+            <div key={c.issue_key} className={`sp-carryover-row severity-${sev}`}>
+              <div className="sp-carryover-head">
+                <Space wrap>
+                  <Tag color={sev} icon={<RetweetOutlined />}>
+                    Carried ×{c.carry_over_count}
+                  </Tag>
+                  <Text strong>{c.issue_key}</Text>
+                  {c.risk_level && <Tag color={c.risk_level === "High" ? "error" : c.risk_level === "Medium" ? "warning" : "success"}>{c.risk_level} risk</Tag>}
+                  {c.predicted_size != null && <Tag>{c.predicted_size} SP</Tag>}
+                  {c.blocker_reason && (
+                    <Tooltip title={c.blocker_reason}>
+                      <Tag color="error" icon={<WarningOutlined />}>
+                        Blocked
+                      </Tag>
+                    </Tooltip>
+                  )}
+                </Space>
+              </div>
+              <Text>{c.title}</Text>
+              <div className="sp-carryover-meta">
+                {c.assignee_name && (
+                  <Tag icon={<UserOutlined />}>
+                    Last assignee: {c.assignee_name}
+                  </Tag>
+                )}
+                {(c.past_sprints || []).slice(0, 6).map((s) => (
+                  <Tag key={s}>{s}</Tag>
+                ))}
+                {(c.past_sprints || []).length > 6 && (
+                  <Tag>+{c.past_sprints.length - 6} more</Tag>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
@@ -171,6 +254,8 @@ export default function SprintReviewPanel({
           {review.capacity_by_member?.length > 0 && (
             <CapacityPanel rows={review.capacity_by_member} />
           )}
+
+          <CarryoverWatch items={review.carry_over_items} />
 
           <DecisionReceipt text={review.decision_receipt} />
         </Space>

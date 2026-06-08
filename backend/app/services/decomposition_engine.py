@@ -21,6 +21,7 @@ from ..models import (
     PlanningResult,
     SubTask,
     TeamMember,
+    TeamPerformance,
 )
 from .assignment_engine import assign_subtask
 
@@ -101,17 +102,19 @@ def decompose(
     issue: JiraIssue,
     planning: PlanningResult,
     team: list[TeamMember],
+    performance: list[TeamPerformance] | None = None,
 ) -> DecompositionResult:
     types = _choose_types(issue)
     log.info(
-        "decompose %s parent_size=%d -> chose types=%s (signals: needs_ac=%s needs_db=%s needs_fe=%s)",
+        "decompose %s parent_size=%d -> chose types=%s (signals: needs_ac=%s needs_db=%s needs_fe=%s) perf_rows=%s",
         issue.key, planning.predicted_size, types,
         _needs_analysis(issue), _needs_db(issue), _needs_frontend(issue),
+        len(performance) if performance else 0,
     )
     subtasks: list[SubTask] = []
     for i, t in enumerate(types):
         size = _estimate_size(planning.predicted_size, t, len(types))
-        suggested = assign_subtask(t, size, team)
+        suggested = assign_subtask(t, size, team, performance)
         deadline = _staggered_deadline(issue.deadline, i, len(types))
         subtask_id = f"{issue.key}-{_suffix(t)}"
         subtasks.append(

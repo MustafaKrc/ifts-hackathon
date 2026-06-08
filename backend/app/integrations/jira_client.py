@@ -19,7 +19,7 @@ import requests
 import urllib3
 from requests.auth import HTTPBasicAuth
 
-from ..models import HistoricalIssue, JiraIssue
+from ..models import HistoricalIssue, JiraIssue, Sprint, SprintRef
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -110,6 +110,69 @@ def _extract_blocker_reason(issuelinks: list, labels: list[str]) -> Optional[str
     return None
 
 
+def _parse_sprint_list(field_value) -> list[SprintRef]:
+    """Return the FULL sprint membership list for an issue (history).
+
+    Handles two Jira representations:
+      - Newer: list of dicts with id/name/state.
+      - Older: list of strings like
+        "com.atlassian.greenhopper.service.sprint.Sprint@xxxx[id=12345,name=Sprint 214,state=ACTIVE,...]"
+    """
+    if not field_value:
+        return []
+
+    out: list[SprintRef] = []
+    seen: set[int] = set()
+    items = field_value if isinstance(field_value, list) else [field_value]
+    for item in items:
+        if isinstance(item, dict):
+            sid = item.get("id")
+            name = item.get("name")
+            state = (item.get("state") or "closed").lower()
+            if sid is None or not name:
+                continue
+            try:
+                sid_int = int(sid)
+            except (TypeError, ValueError):
+                continue
+            if sid_int in seen:
+                continue
+            seen.add(sid_int)
+            out.append(SprintRef(id=sid_int, name=str(name), state=state))
+        elif isinstance(item, str):
+            try:
+                bracket = item[item.index("[") + 1 : item.rindex("]")]
+                parts = dict(p.split("=", 1) for p in bracket.split(",") if "=" in p)
+                sid_raw = parts.get("id")
+                name = parts.get("name")
+                state = (parts.get("state") or "closed").lower()
+                if sid_raw and name:
+                    sid_int = int(sid_raw)
+                    if sid_int in seen:
+                        continue
+                    seen.add(sid_int)
+                    out.append(SprintRef(id=sid_int, name=name, state=state))
+            except (ValueError, IndexError):
+                continue
+    # Sort: active first, then by id desc (newest closed first)
+    out.sort(key=lambda s: (0 if s.state == "active" else 1, -s.id))
+    return out
+
+
+def _pick_primary_sprint(
+    history: list[SprintRef],
+) -> tuple[Optional[int], Optional[str], Optional[str]]:
+    if not history:
+        return None, None, None
+    primary = history[0]
+    return primary.id, primary.name, primary.state
+
+
+def _carry_over_count(history: list[SprintRef]) -> int:
+    """How many times has this issue slipped from a closed sprint?"""
+    return sum(1 for s in history if s.state == "closed")
+
+
 def _parse_acceptance_criteria(description: str) -> Optional[str]:
     if not description:
         return None
@@ -135,6 +198,8 @@ class JiraClient:
         self.mode = os.environ.get("JIRA_AUTH_MODE", "bearer").lower()
         self.verify = os.environ.get("JIRA_VERIFY_SSL", "false").lower() == "true"
         self.sp_field = os.environ.get("JIRA_SP_FIELD", "customfield_10028")
+        # Sprint field on issues. Older Jira: customfield_10020. Newer Cloud sometimes 10010.
+        self.sprint_field = os.environ.get("JIRA_SPRINT_FIELD", "customfield_10020")
         self._cache: dict[str, object] = {}
 
         if self.mode == "bearer":
@@ -205,39 +270,160 @@ class JiraClient:
         self._cache[cache_key] = issues
         return issues
 
-    def fetch_backlog(self, project_key: str) -> list[JiraIssue]:
-        fields = (
+    def _backlog_fields(self) -> str:
+        return (
             "summary,description,priority,status,labels,components,"
-            "issuelinks,duedate,assignee," + self.sp_field
+            f"issuelinks,duedate,assignee,{self.sp_field},{self.sprint_field}"
         )
-        jql = (
-            f'project = "{project_key}" AND statusCategory != Done '
-            f"ORDER BY priority DESC, duedate ASC"
+
+    def fetch_boards(self, project_key: str) -> list[dict]:
+        cache_key = f"boards::{project_key}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]  # type: ignore[return-value]
+        data = self._get(
+            "/rest/agile/1.0/board",
+            params={"projectKeyOrId": project_key, "type": "scrum", "maxResults": 50},
         )
+        boards = data.get("values", [])
+        log.info("fetch_boards %s -> %d board(s)", project_key, len(boards))
+        self._cache[cache_key] = boards
+        return boards
+
+    def fetch_recent_sprints(self, project_key: str, limit: int = 10) -> list[Sprint]:
+        """Auto-discover the last N sprints (by id desc) for the given project.
+
+        Walks through every Scrum board found for the project, lists their
+        sprints (active + closed + future, paginated), and returns the top
+        `limit` by id descending. Result is cached for the process lifetime.
+        """
+        cache_key = f"recent_sprints::{project_key}::{limit}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]  # type: ignore[return-value]
+
+        boards = self.fetch_boards(project_key)
+        if not boards:
+            log.warning("fetch_recent_sprints: no boards for project %s", project_key)
+            return []
+
+        seen_ids: set[int] = set()
+        collected: list[Sprint] = []
+        for b in boards:
+            board_id = b.get("id")
+            if not board_id:
+                continue
+            start_at = 0
+            while True:
+                try:
+                    data = self._get(
+                        f"/rest/agile/1.0/board/{board_id}/sprint",
+                        params={
+                            "state": "active,closed,future",
+                            "startAt": start_at,
+                            "maxResults": 50,
+                        },
+                    )
+                except Exception as e:
+                    log.warning("Sprint list failed for board %s: %s", board_id, e)
+                    break
+                values = data.get("values", [])
+                for s in values:
+                    sid = s.get("id")
+                    if sid in seen_ids:
+                        continue
+                    seen_ids.add(sid)
+                    collected.append(
+                        Sprint(
+                            id=sid,
+                            name=s.get("name", f"Sprint {sid}"),
+                            state=s.get("state", "closed"),
+                            start_date=_parse_date(s.get("startDate")),
+                            end_date=_parse_date(s.get("endDate") or s.get("completeDate")),
+                            board_id=board_id,
+                        )
+                    )
+                if data.get("isLast", True) or len(values) == 0:
+                    break
+                start_at += 50
+
+        collected.sort(key=lambda s: s.id, reverse=True)
+        top = collected[:limit]
+        log.info(
+            "fetch_recent_sprints %s collected=%d returning top %d (ids=%s)",
+            project_key, len(collected), len(top), [s.id for s in top],
+        )
+        self._cache[cache_key] = top
+        return top
+
+    def fetch_backlog(self, project_key: str) -> list[JiraIssue]:
+        """Return the project backlog (items not in any active/closed sprint).
+
+        Strategy:
+          1. Try the Agile API `/board/{id}/backlog`. This is what Jira's
+             "Backlog" tab shows: unscheduled work + future-sprint items,
+             but never the active sprint or closed sprints.
+          2. If no Scrum board is found, fall back to a JQL search with
+             `sprint is EMPTY`.
+        """
+        fields = self._backlog_fields()
         log.info("fetch_backlog start project_key=%s", project_key)
-        raw_issues = self._search(jql, fields, max_results=50)
+
+        boards = self.fetch_boards(project_key)
+        if boards:
+            board_id = boards[0].get("id")
+            try:
+                data = self._get(
+                    f"/rest/agile/1.0/board/{board_id}/backlog",
+                    params={"fields": fields, "maxResults": 100},
+                )
+                raw_issues = data.get("issues", [])
+                mapped = [self._map_jira_issue(r) for r in raw_issues]
+                log.info(
+                    "fetch_backlog (agile /backlog) board=%s returning %d issues",
+                    board_id, len(mapped),
+                )
+                return mapped
+            except Exception as e:
+                log.warning(
+                    "Agile /backlog fetch failed for board %s: %s — falling back to JQL",
+                    board_id, e,
+                )
+
+        jql = (
+            f'project = "{project_key}" AND sprint is EMPTY '
+            f"AND statusCategory != Done ORDER BY priority DESC, duedate ASC"
+        )
+        raw_issues = self._search(jql, fields, max_results=100)
         mapped = [self._map_jira_issue(r) for r in raw_issues]
-        log.info("fetch_backlog returning %d mapped issues", len(mapped))
+        log.info("fetch_backlog (JQL fallback) returning %d issues", len(mapped))
         return mapped
 
     def fetch_historical(
-        self, project_key: str, sprint_names: list[str]
+        self,
+        project_key: str,
+        sprint_names: list[str] | None = None,
+        sprint_ids: list[int] | None = None,
     ) -> list[HistoricalIssue]:
-        if not sprint_names:
-            log.warning("fetch_historical called with empty sprint_names list")
+        if not sprint_names and not sprint_ids:
+            log.warning("fetch_historical called with empty sprint filters")
             return []
         fields = (
             "summary,description,priority,status,labels,components,"
-            "issuelinks,resolutiondate,created,assignee," + self.sp_field
+            f"issuelinks,resolutiondate,created,assignee,{self.sp_field},{self.sprint_field}"
         )
-        sprint_list = ", ".join(f'"{s.strip()}"' for s in sprint_names if s.strip())
+        if sprint_ids:
+            sprint_clause = "(" + ", ".join(str(i) for i in sprint_ids) + ")"
+        else:
+            sprint_clause = "(" + ", ".join(
+                f'"{s.strip()}"' for s in sprint_names or [] if s.strip()
+            ) + ")"
         jql = (
-            f'project = "{project_key}" AND sprint in ({sprint_list}) '
+            f'project = "{project_key}" AND sprint in {sprint_clause} '
             f"AND statusCategory = Done"
         )
         log.info(
-            "fetch_historical start project_key=%s sprints=%d",
-            project_key, len(sprint_names),
+            "fetch_historical start project_key=%s sprints=%s",
+            project_key,
+            sprint_ids or sprint_names,
         )
         raw_issues = self._search(jql, fields, max_results=100)
         mapped: list[HistoricalIssue] = []
@@ -277,6 +463,8 @@ class JiraClient:
         components = [c.get("name", "") for c in (f.get("components") or [])]
         issuelinks = f.get("issuelinks") or []
         description = f.get("description") or ""
+        sprint_history = _parse_sprint_list(f.get(self.sprint_field))
+        sprint_id, sprint_name, sprint_state = _pick_primary_sprint(sprint_history)
 
         return JiraIssue(
             id=raw.get("id", raw.get("key", "")),
@@ -294,6 +482,11 @@ class JiraClient:
             deadline=_parse_date(f.get("duedate")),
             assignee_id=assignee.get("name") or assignee.get("accountId"),
             assignee_name=assignee.get("displayName"),
+            sprint_id=sprint_id,
+            sprint_name=sprint_name,
+            sprint_state=sprint_state,
+            sprint_history=sprint_history,
+            carry_over_count=_carry_over_count(sprint_history),
         )
 
     def _map_historical(self, raw: dict) -> Optional[HistoricalIssue]:
@@ -319,6 +512,11 @@ class JiraClient:
             _extract_blocker_reason(f.get("issuelinks") or [], labels)
         )
         description = (f.get("description") or "")[:600]
+        assignee = f.get("assignee") or {}
+        sprint_history = _parse_sprint_list(f.get(self.sprint_field))
+        # If the issue was in more than one closed sprint, it carried over.
+        carried_over = sum(1 for s in sprint_history if s.state == "closed") > 1
+        sprint_name = sprint_history[0].name if sprint_history else None
 
         return HistoricalIssue(
             id=raw.get("id", raw.get("key", "")),
@@ -331,8 +529,11 @@ class JiraClient:
             actual_size=actual,
             cycle_time_days=cycle,
             had_blocker=had_blocker,
-            carried_over=False,
+            carried_over=carried_over,
             priority=_map_priority((f.get("priority") or {}).get("name", "")),
+            assignee_id=assignee.get("name") or assignee.get("accountId"),
+            assignee_name=assignee.get("displayName"),
+            sprint_name=sprint_name,
         )
 
 

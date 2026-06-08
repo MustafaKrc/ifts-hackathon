@@ -24,71 +24,201 @@ body {
   min-height: 100vh;
 }
 
-/* ─── Layout ───────────────────────────────────────────────────── */
+/* ─── Multi-page Layout ────────────────────────────────────────── */
 
-.sp-layout {
-  min-height: 100vh;
+.ant-layout {
   background:
-    radial-gradient(circle at top left, rgba(255, 209, 0, 0.32), transparent 28rem),
-    linear-gradient(135deg, #ffffff 0%, #f7f9ff 48%, #edf4ff 100%);
+    radial-gradient(circle at top left, rgba(255, 209, 0, 0.18), transparent 32rem),
+    linear-gradient(135deg, #ffffff 0%, #f7f9ff 48%, #edf4ff 100%) !important;
 }
 
-.sp-content {
-  padding: 1.5rem clamp(1rem, 4vw, 3.5rem) 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
-  width: 100%;
+.sp-sider.ant-layout-sider {
+  background: rgba(255, 255, 255, 0.92);
+  border-right: 1px solid rgba(0, 48, 135, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 48, 135, 0.05);
 }
 
-.sp-footer {
-  background: transparent;
-  padding: 1rem 1.5rem 2rem;
-  text-align: center;
-}
-
-/* ─── Header ───────────────────────────────────────────────────── */
-
-.sp-header {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 48, 135, 0.1);
+.sp-sider .ant-layout-sider-children {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-direction: column;
+}
+
+.sp-brand {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.7rem;
+  padding: 1rem 1rem 0.8rem;
+  border-bottom: 1px solid rgba(0, 48, 135, 0.06);
+}
+
+.sp-brand-logo {
+  background: var(--turkcell-yellow);
+  border-radius: 12px;
+  color: var(--turkcell-navy);
+  font-size: 1.6rem;
+  padding: 0.45rem 0.55rem;
+  box-shadow: 0 6px 16px rgba(255, 209, 0, 0.32);
+}
+
+.sp-brand-title.ant-typography {
+  color: var(--turkcell-navy);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.sp-brand-tag {
+  color: rgba(0, 48, 135, 0.65);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sp-menu.ant-menu {
+  background: transparent;
+  border-inline-end: none;
+  padding: 0.6rem 0.4rem;
+}
+
+.sp-menu.ant-menu-inline .ant-menu-item {
+  border-radius: 12px;
+  font-weight: 700;
+  margin: 4px 0;
+  height: 44px;
+}
+
+.sp-menu.ant-menu-inline .ant-menu-item-selected {
+  background: rgba(0, 48, 135, 0.08) !important;
+  color: var(--turkcell-navy) !important;
+}
+
+.sp-menu.ant-menu-inline .ant-menu-item:hover {
+  background: rgba(255, 209, 0, 0.18) !important;
+  color: var(--turkcell-navy) !important;
+}
+
+.sp-app-header {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 48, 135, 0.08);
+  display: flex !important;
   justify-content: space-between;
-  padding: 1rem clamp(1rem, 4vw, 3.5rem);
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  padding: 0.9rem clamp(1rem, 3vw, 2rem) !important;
+  height: auto !important;
+  line-height: 1.3 !important;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.sp-header-left .sp-header-logo {
-  background: var(--turkcell-yellow);
-  border-radius: 12px;
+.sp-page-crumb {
   color: var(--turkcell-navy);
-  font-size: 1.5rem;
-  padding: 0.4rem 0.5rem;
-}
-
-.sp-header-title.ant-typography {
-  color: var(--turkcell-navy);
-  font-size: 1.65rem;
+  font-size: 1.1rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin: 0;
-  line-height: 1;
+  letter-spacing: -0.01em;
 }
 
-.sp-header-subtitle {
-  color: rgba(0, 48, 135, 0.7);
-  font-size: 0.85rem;
-  font-weight: 600;
+.sp-app-content {
+  padding: 1.4rem clamp(1rem, 3vw, 2rem) 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.sp-header-pill {
+.sp-app-footer {
+  background: transparent !important;
+  padding: 0.8rem 1.4rem 1.4rem !important;
+  text-align: center;
+}
+
+/* ─── Filter bar ───────────────────────────────────────────── */
+
+.sp-filter-bar {
+  align-items: center;
+  background: rgba(0, 48, 135, 0.03);
+  border: 1px dashed rgba(0, 48, 135, 0.14);
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.4rem;
+  padding: 0.7rem 0.9rem;
+}
+
+/* ─── Carryover styling ─────────────────────────────────────── */
+
+.sp-issue-card.is-carryover {
+  background: linear-gradient(180deg, #fff 0%, rgba(255, 107, 53, 0.04) 100%);
+  border-left: 4px solid var(--turkcell-orange);
+}
+
+.sp-carryover-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sp-carryover-row {
+  background: var(--turkcell-white);
+  border: 1px solid rgba(0, 48, 135, 0.08);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+
+.sp-carryover-row.severity-warning {
+  border-left-color: #faad14;
+}
+
+.sp-carryover-row.severity-volcano {
+  border-left-color: var(--turkcell-orange);
+  background: linear-gradient(180deg, #fff 0%, rgba(255, 107, 53, 0.06) 100%);
+}
+
+.sp-carryover-row.severity-error {
+  border-left-color: var(--turkcell-red);
+  background: linear-gradient(180deg, #fff 0%, rgba(220, 53, 69, 0.06) 100%);
+}
+
+.sp-carryover-head {
+  margin-bottom: 0.3rem;
+}
+
+.sp-carryover-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+/* ─── Assignment reason chip list ───────────────────────────── */
+
+.sp-assign-reason {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.3rem 0 0;
+}
+
+.sp-assign-chip {
+  background: rgba(0, 48, 135, 0.05);
+  border-radius: 8px;
+  color: rgba(26, 26, 46, 0.85);
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+
+.sp-assign-chip.is-primary {
+  background: rgba(255, 209, 0, 0.25);
+  color: var(--turkcell-navy);
   font-weight: 700;
-  padding: 0.25rem 0.6rem;
 }
 
 /* ─── Section cards ───────────────────────────────────────────── */

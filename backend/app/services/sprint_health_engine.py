@@ -15,6 +15,7 @@ from datetime import date
 from ..data.mock_team import find_by_id, get_team
 from ..models import (
     CapacityInfo,
+    CarryOverItem,
     JiraIssue,
     PlanningResult,
     SprintHealth,
@@ -234,6 +235,47 @@ def compute_sprint_health(
     if not actions:
         actions.append("Proceed with this sprint plan as scoped.")
 
+    # Build carry-over watch list from selected issues' sprint_history
+    plan_by_key = {p.issue_key: p for p in plannings}
+    carry_items: list[CarryOverItem] = []
+    for i in issues:
+        if i.carry_over_count <= 0:
+            continue
+        past = [s.name for s in i.sprint_history if s.state == "closed"]
+        plan = plan_by_key.get(i.key)
+        carry_items.append(
+            CarryOverItem(
+                issue_key=i.key,
+                title=i.title,
+                carry_over_count=i.carry_over_count,
+                assignee_name=i.assignee_name,
+                current_sprint=i.sprint_name,
+                past_sprints=past,
+                predicted_size=plan.predicted_size if plan else None,
+                risk_level=plan.risk_level if plan else None,
+                blocker_reason=i.blocker_reason,
+            )
+        )
+    carry_items.sort(key=lambda c: -c.carry_over_count)
+
+    if carry_items:
+        worst = carry_items[0]
+        risks.append(
+            f"{len(carry_items)} carryover issue(s) selected; worst: "
+            f"{worst.issue_key} has slipped {worst.carry_over_count} sprint(s)."
+        )
+        if worst.carry_over_count >= 2:
+            actions.append(
+                f"Investigate {worst.issue_key} — slipped {worst.carry_over_count} "
+                "sprints; consider splitting or de-scoping."
+            )
+
+    log.info(
+        "compute_sprint_health carry_over_items=%d (max slipped=%d)",
+        len(carry_items),
+        carry_items[0].carry_over_count if carry_items else 0,
+    )
+
     summary = _generate_review_summary(issues, plannings, verdict, score)
     receipt = _generate_decision_receipt(issues, plannings, score, verdict, risks, actions)
 
@@ -245,6 +287,7 @@ def compute_sprint_health(
         capacity=capacity,
         capacity_by_member=capacity_info,
         carry_over_risk=int(avg_carry_over),
+        carry_over_items=carry_items,
         risks=risks,
         recommended_actions=actions,
         review_summary=summary,

@@ -14,6 +14,12 @@ NotificationType = Literal[
 ]
 
 
+class SprintRef(BaseModel):
+    id: int
+    name: str
+    state: str  # "active" | "closed" | "future"
+
+
 class JiraIssue(BaseModel):
     id: str
     key: str
@@ -30,6 +36,23 @@ class JiraIssue(BaseModel):
     deadline: Optional[date] = None
     assignee_id: Optional[str] = None
     assignee_name: Optional[str] = None
+    # Sprint membership. `sprint_*` is the "primary" sprint (active if any, else
+    # highest id). `sprint_history` is the full membership timeline used to
+    # compute carry-over.
+    sprint_id: Optional[int] = None
+    sprint_name: Optional[str] = None
+    sprint_state: Optional[str] = None
+    sprint_history: List[SprintRef] = Field(default_factory=list)
+    carry_over_count: int = 0
+
+
+class Sprint(BaseModel):
+    id: int
+    name: str
+    state: str  # "active" | "closed" | "future"
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    board_id: Optional[int] = None
 
 
 class HistoricalIssue(BaseModel):
@@ -45,6 +68,9 @@ class HistoricalIssue(BaseModel):
     had_blocker: bool = False
     carried_over: bool = False
     priority: IssuePriority = "Medium"
+    assignee_id: Optional[str] = None
+    assignee_name: Optional[str] = None
+    sprint_name: Optional[str] = None
 
 
 class SimilarIssueEvidence(BaseModel):
@@ -57,15 +83,55 @@ class SimilarIssueEvidence(BaseModel):
     reason: str
 
 
+SeniorityTitle = Literal["Junior", "Mid", "Senior", "Lead", "Principal"]
+SkillArea = Literal[
+    "Frontend", "Backend", "DB", "API", "Architecture",
+    "Test", "QA", "Automation",
+    "Analysis", "BA", "Requirements",
+    "Performance", "UX", "DevOps",
+]
+
+
+class SkillProficiency(BaseModel):
+    """One row of a team member's skill matrix.
+
+    `level` is 1-5 (1=Beginner, 3=Working, 5=Expert).
+    `historical_sp` is filled at runtime from past sprints; the curated
+    mock value here is a baseline used when Jira history is unavailable.
+    """
+    area: SkillArea
+    level: int  # 1..5
+    historical_sp: int = 0
+
+
 class TeamMember(BaseModel):
     id: str
     name: str
     role: TeamRole
+    title: SeniorityTitle = "Mid"
+    years_experience: int = 3
+    skill_matrix: List[SkillProficiency] = Field(default_factory=list)
+    # Legacy flat list, derived from skill_matrix for backwards compat.
     skills: List[str] = Field(default_factory=list)
     capacity: int
     current_load: int
     email: Optional[str] = None
     teams_handle: Optional[str] = None
+
+
+class TeamPerformance(BaseModel):
+    member_id: str
+    member_name: str
+    title: SeniorityTitle
+    role: TeamRole
+    years_experience: int
+    total_historical_sp: int
+    sprints_observed: int
+    avg_sp_per_sprint: float
+    carried_over_count: int
+    completion_rate: float  # 0..1 — kept simple (issues delivered / issues attempted)
+    by_area: dict[str, int] = Field(default_factory=dict)
+    proficiency: List[SkillProficiency] = Field(default_factory=list)
 
 
 class PlanningResult(BaseModel):
@@ -165,6 +231,18 @@ class CapacityInfo(BaseModel):
     utilization_percent: int
 
 
+class CarryOverItem(BaseModel):
+    issue_key: str
+    title: str
+    carry_over_count: int
+    assignee_name: Optional[str] = None
+    current_sprint: Optional[str] = None
+    past_sprints: List[str] = Field(default_factory=list)
+    predicted_size: Optional[int] = None
+    risk_level: Optional[RiskLevel] = None
+    blocker_reason: Optional[str] = None
+
+
 class SprintHealth(BaseModel):
     score: int
     verdict: SprintVerdict
@@ -173,6 +251,7 @@ class SprintHealth(BaseModel):
     capacity: int
     capacity_by_member: List[CapacityInfo] = Field(default_factory=list)
     carry_over_risk: int
+    carry_over_items: List[CarryOverItem] = Field(default_factory=list)
     risks: List[str] = Field(default_factory=list)
     recommended_actions: List[str] = Field(default_factory=list)
     review_summary: str
@@ -238,3 +317,9 @@ class StatusInfo(BaseModel):
     openai_configured: bool
     data_source: Literal["jira", "fallback"]
     fallback_reason: Optional[str] = None
+
+
+class SprintsResponse(BaseModel):
+    sprints: List[Sprint] = Field(default_factory=list)
+    source: Literal["jira", "fallback"]
+    reason: Optional[str] = None

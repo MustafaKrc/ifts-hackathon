@@ -4,6 +4,7 @@ from ..data.mock_team import get_team
 from ..models import ReviewRequest
 from ..services.data_provider import fetch_backlog, fetch_history
 from ..services.decomposition_engine import decompose
+from ..services.historical_performance import compute_team_performance
 from ..services.planning_engine import plan_sprint
 from ..services.predictive_sizing import predict_size
 from ..services.sequencing_engine import sequence_decomposition
@@ -20,6 +21,7 @@ def post_review(req: ReviewRequest):
 
     backlog = fetch_backlog().issues
     history = fetch_history().issues
+    performance = compute_team_performance(history)
     by_key = {i.key: i for i in backlog}
     selected = [by_key[k] for k in req.issue_keys if k in by_key]
     if not selected:
@@ -33,7 +35,7 @@ def post_review(req: ReviewRequest):
         if existing:
             sequences.append(existing)
         else:
-            decomposition = decompose(issue, planning, team)
+            decomposition = decompose(issue, planning, team, performance)
             seq = sequence_decomposition(decomposition, issue, team)
             store.save_sequence(seq)
             sequences.append(seq)

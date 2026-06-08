@@ -12,4 +12,5 @@ def get_backlog():
         "issues": [i.model_dump(mode="json") for i in snapshot.issues],
         "source": snapshot.source,
         "fallback_reason": snapshot.reason,
+        "sprints": [s.model_dump(mode="json") for s in snapshot.sprints],
     }

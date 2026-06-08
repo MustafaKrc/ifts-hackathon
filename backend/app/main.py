@@ -37,9 +37,11 @@ from .routers import (  # noqa: E402  (env must load before routers init clients
     review,
     sequence,
     simulate,
+    sprints,
     status,
     tasks,
     team,
+    team_performance,
 )
 
 
@@ -110,6 +112,8 @@ def health():
 for router in (
     backlog.router,
     team.router,
+    team_performance.router,
+    sprints.router,
     planning.router,
     decompose.router,
     sequence.router,
