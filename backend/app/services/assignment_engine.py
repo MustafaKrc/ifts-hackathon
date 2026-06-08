@@ -8,9 +8,12 @@ overload risk and a one-sentence "Why this assignee?" reason.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from ..models import RiskLevel, TeamMember
+
+log = logging.getLogger("sprintpilot.assign")
 
 # Which roles are acceptable for each subtask type, in preference order.
 _ROLE_PREFERENCE: dict[str, list[str]] = {
@@ -107,6 +110,12 @@ def assign_subtask(
 
     if risk == "High":
         reason += "; assignment is risky — consider redistributing load"
+
+    log.info(
+        "assign type=%s size=%d -> %s (%s) score=%.1f overload=%s; runners-up=%s",
+        type_, size, best_member.id, best_member.name, best_score, risk,
+        [(m.id, round(s, 1)) for s, m, _ in scored[1:3]],
+    )
 
     return AssignmentSuggestion(
         assignee_id=best_member.id,

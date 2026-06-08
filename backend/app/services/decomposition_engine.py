@@ -11,6 +11,7 @@ predicted size, weighted by the subtask type. The sum approximates the parent.
 
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from typing import Optional
 
@@ -22,6 +23,8 @@ from ..models import (
     TeamMember,
 )
 from .assignment_engine import assign_subtask
+
+log = logging.getLogger("sprintpilot.decompose")
 
 _SIZE_WEIGHTS = {
     "Analysis": 0.15,
@@ -100,6 +103,11 @@ def decompose(
     team: list[TeamMember],
 ) -> DecompositionResult:
     types = _choose_types(issue)
+    log.info(
+        "decompose %s parent_size=%d -> chose types=%s (signals: needs_ac=%s needs_db=%s needs_fe=%s)",
+        issue.key, planning.predicted_size, types,
+        _needs_analysis(issue), _needs_db(issue), _needs_frontend(issue),
+    )
     subtasks: list[SubTask] = []
     for i, t in enumerate(types):
         size = _estimate_size(planning.predicted_size, t, len(types))
@@ -120,6 +128,12 @@ def decompose(
                 deadline=deadline,
             )
         )
+        log.info(
+            "decompose %s subtask=%s type=%s size=%d assignee=%s overload=%s deadline=%s",
+            issue.key, subtask_id, t, size, suggested.assignee_name,
+            suggested.overload_risk, deadline,
+        )
+    log.info("decompose %s produced %d subtasks total", issue.key, len(subtasks))
     return DecompositionResult(issue_key=issue.key, subtasks=subtasks)
 
 

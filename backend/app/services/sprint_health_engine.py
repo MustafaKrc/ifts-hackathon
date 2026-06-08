@@ -9,6 +9,7 @@ paths, deadline risk, and squeezed test windows. Result is normalised to
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 
 from ..data.mock_team import find_by_id, get_team
@@ -19,6 +20,8 @@ from ..models import (
     SprintHealth,
     TaskSequenceResult,
 )
+
+log = logging.getLogger("sprintpilot.health")
 
 
 def _team_capacity() -> int:
@@ -107,13 +110,19 @@ def compute_sprint_health(
     planned_total = sum((p.original_size or 0) for p in plannings)
     predicted_total = sum(p.predicted_size for p in plannings)
     capacity = _team_capacity()
+    log.info(
+        "compute_sprint_health start issues=%d planned=%d predicted=%d free_capacity=%d sequences=%d",
+        len(issues), planned_total, predicted_total, capacity, len(sequences),
+    )
 
     risks: list[str] = []
     actions: list[str] = []
+    deductions: list[str] = []
     score = 100
 
     if predicted_total > capacity and capacity > 0:
         score -= 25
+        deductions.append("overcommit -25")
         risks.append(
             f"Predicted effort {predicted_total} SP exceeds remaining team "
             f"capacity {capacity} SP."
@@ -123,12 +132,15 @@ def compute_sprint_health(
     high_risk = [p for p in plannings if p.risk_level == "High"]
     score -= 8 * len(high_risk)
     if high_risk:
+        deductions.append(f"high_risk -{8 * len(high_risk)}")
         risks.append(
             f"{len(high_risk)} high-risk issue(s): {', '.join(p.issue_key for p in high_risk)}"
         )
 
     blocked_issues = [i for i in issues if i.blocker_reason or i.status == "Blocked"]
     score -= 10 * len(blocked_issues)
+    if blocked_issues:
+        deductions.append(f"blocked -{10 * len(blocked_issues)}")
     if blocked_issues:
         risks.append(
             f"{len(blocked_issues)} issue(s) blocked: "
@@ -138,6 +150,8 @@ def compute_sprint_health(
 
     low_confidence = [p for p in plannings if p.confidence < 55]
     score -= 6 * len(low_confidence)
+    if low_confidence:
+        deductions.append(f"low_conf -{6 * len(low_confidence)}")
     if low_confidence:
         risks.append(
             f"{len(low_confidence)} issue(s) sized with low confidence."
@@ -149,12 +163,15 @@ def compute_sprint_health(
     )
     if avg_carry_over >= 50:
         score -= 10
+        deductions.append("carry_over -10")
         risks.append(f"Average carry-over risk is {int(avg_carry_over)}%.")
         actions.append("Plan smaller vertical slices to reduce carry-over risk.")
 
     capacity_info = _capacity_breakdown(sequences)
     overloaded = [c for c in capacity_info if c.utilization_percent >= 90]
     score -= 8 * len(overloaded)
+    if overloaded:
+        deductions.append(f"overloaded -{8 * len(overloaded)}")
     for c in overloaded:
         risks.append(
             f"{c.member_name} is at {c.utilization_percent}% utilization."
@@ -166,6 +183,7 @@ def compute_sprint_health(
         longest_path = max(longest_path, len(seq.critical_path))
     if longest_path >= 4:
         score -= 8
+        deductions.append("critical_path -8")
         risks.append(
             f"Critical path is {longest_path} tasks deep — long serial chain."
         )
@@ -182,6 +200,7 @@ def compute_sprint_health(
                 near_deadline_not_ready += 1
     if near_deadline_not_ready:
         score -= 10
+        deductions.append(f"near_deadline_not_ready -{10}")
         risks.append(
             f"{near_deadline_not_ready} task(s) have a deadline within 2 days but are Not Ready."
         )
@@ -193,9 +212,11 @@ def compute_sprint_health(
             break
     if test_squeeze:
         score -= 10
+        deductions.append("test_squeeze -10")
         risks.append("Test window is squeezed by remaining development workload.")
         actions.append("Move part of a large task to next sprint to free QA time.")
 
+    raw_score = score
     score = max(1, min(100, score))
     if score >= 75:
         verdict = "Healthy"
@@ -203,6 +224,12 @@ def compute_sprint_health(
         verdict = "Risky"
     else:
         verdict = "Overcommitted"
+
+    log.info(
+        "compute_sprint_health result score=%d (raw=%d, clamped) verdict=%s deductions=[%s] risks=%d actions=%d",
+        score, raw_score, verdict, ", ".join(deductions) or "none",
+        len(risks), len(actions),
+    )
 
     if not actions:
         actions.append("Proceed with this sprint plan as scoped.")

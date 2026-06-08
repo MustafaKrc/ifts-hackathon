@@ -16,6 +16,7 @@ with capacity <= 100%).
 
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 
 from ..models import (
@@ -27,6 +28,8 @@ from ..models import (
 )
 from .planning_engine import plan_sprint
 from .sprint_health_engine import compute_sprint_health
+
+log = logging.getLogger("sprintpilot.sim")
 
 
 def _risk_score(planning: PlanningResult) -> int:
@@ -216,4 +219,16 @@ def simulate(
 
     recommended = sorted(scenarios, key=rank)[0]
     recommended.is_recommended = True
+
+    log.info(
+        "simulate produced %d scenarios; recommended=%s",
+        len(scenarios), recommended.scenario_name,
+    )
+    for s in scenarios:
+        log.info(
+            "  scenario=%s verdict=%s health=%d predicted=%dSP cap_util=%d%% carry=%d%% deadline_risk=%d%% recommended=%s",
+            s.scenario_name, s.verdict, s.sprint_health_score,
+            s.predicted_points, s.capacity_utilization, s.carry_over_risk,
+            s.deadline_risk, s.is_recommended,
+        )
     return scenarios

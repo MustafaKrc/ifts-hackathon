@@ -17,6 +17,7 @@ With these refinements:
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from typing import Optional
 
@@ -32,6 +33,8 @@ from ..models import (
     TeamMember,
 )
 from .openai_priority_advisor import get_openai_sequence
+
+log = logging.getLogger("sprintpilot.sequence")
 
 _STAGE_ORDER = ["Analysis", "DB", "Backend", "Frontend", "Test"]
 
@@ -351,6 +354,10 @@ def sequence_decomposition(
     team: list[TeamMember],
 ) -> TaskSequenceResult:
     deps = _build_dependency_graph(decomp.subtasks)
+    log.info(
+        "sequence start %s subtasks=%d edges=%d",
+        issue.key, len(decomp.subtasks), len(deps),
+    )
 
     payload = get_openai_sequence(decomp.subtasks, team, issue)
     used_openai = False
@@ -360,13 +367,26 @@ def sequence_decomposition(
                 payload, decomp.subtasks, deps
             )
             used_openai = True
-        except Exception:
+            log.info("sequence %s using OpenAI Priority Advisor result", issue.key)
+        except Exception as e:
+            log.exception("sequence %s OpenAI payload parse failed, falling back: %s", issue.key, e)
             sequenced, critical_path, summary, risks, recommended = _deterministic_sequence(
                 decomp.subtasks, deps, issue
             )
     else:
+        log.info("sequence %s using deterministic fallback (no OpenAI payload)", issue.key)
         sequenced, critical_path, summary, risks, recommended = _deterministic_sequence(
             decomp.subtasks, deps, issue
+        )
+
+    log.info(
+        "sequence %s done used_openai=%s critical_path=%s schedule_risks=%d first_action=%s",
+        issue.key, used_openai, critical_path, len(risks), recommended[:80],
+    )
+    for st in sequenced:
+        log.info(
+            "  order=%d %s status=%s priority_score=%d can_start_after=%s",
+            st.priority_order, st.id, st.status, st.priority_score, st.can_start_after,
         )
 
     return TaskSequenceResult(

@@ -145,7 +145,7 @@ export default function TaskSequencePanel({ sequence }) {
         />
       )}
 
-      <Steps direction="vertical" current={-1} items={items} className="sp-steps" />
+      <Steps orientation="vertical" current={-1} items={items} className="sp-steps" />
 
       <div className="sp-sequence-footer">
         <Tooltip title="Longest serial chain through the subtasks">

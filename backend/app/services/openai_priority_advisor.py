@@ -12,10 +12,29 @@ if OpenAI is misconfigured, unreachable, or rate-limited.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Optional
 
 from ..models import JiraIssue, SubTask, TeamMember
+
+log = logging.getLogger("sprintpilot.openai")
+
+# Session-level circuit breaker: once we hit a quota / auth error,
+# stop trying for the rest of the process so /api/sequence stays snappy
+# and the deterministic fallback takes over immediately.
+_openai_disabled_reason: Optional[str] = None
+
+
+def _disable(reason: str) -> None:
+    global _openai_disabled_reason
+    _openai_disabled_reason = reason
+
+
+def reset_circuit() -> None:
+    """Allow re-trying OpenAI after the operator fixes their key/quota."""
+    global _openai_disabled_reason
+    _openai_disabled_reason = None
 
 _SYSTEM_PROMPT = (
     "You are an expert Agile delivery manager and technical lead. "
@@ -83,23 +102,70 @@ def get_openai_sequence(
 ) -> Optional[dict]:
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
+        log.info("OpenAI advisor skipped for %s: OPENAI_API_KEY not set", issue.key)
+        return None
+    if _openai_disabled_reason:
+        log.info(
+            "OpenAI advisor skipped for %s (circuit open: %s)",
+            issue.key, _openai_disabled_reason,
+        )
         return None
     model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    prompt = _build_prompt(subtasks, team, issue)
+    log.info(
+        "OpenAI advisor calling %s for %s prompt_chars=%d subtasks=%d team=%d",
+        model, issue.key, len(prompt), len(subtasks), len(team),
+    )
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key=api_key)
+        # max_retries=0: don't burn 6-8 seconds on retries when quota is busted.
+        client = OpenAI(api_key=api_key, max_retries=0)
         response = client.chat.completions.create(
             model=model,
             response_format={"type": "json_object"},
             temperature=0.2,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": _build_prompt(subtasks, team, issue)},
+                {"role": "user", "content": prompt},
             ],
             timeout=20,
         )
         content = response.choices[0].message.content or ""
-        return json.loads(content)
-    except Exception:
+        usage = getattr(response, "usage", None)
+        if usage:
+            log.info(
+                "OpenAI advisor response for %s tokens prompt=%s completion=%s total=%s content_chars=%d",
+                issue.key,
+                getattr(usage, "prompt_tokens", "?"),
+                getattr(usage, "completion_tokens", "?"),
+                getattr(usage, "total_tokens", "?"),
+                len(content),
+            )
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as je:
+            log.error(
+                "OpenAI advisor for %s returned unparseable JSON: %s; content (first 300): %s",
+                issue.key, je, content[:300],
+            )
+            return None
+        log.info(
+            "OpenAI advisor parsed payload for %s keys=%s",
+            issue.key, sorted(parsed.keys()) if isinstance(parsed, dict) else type(parsed).__name__,
+        )
+        return parsed
+    except Exception as e:
+        name = type(e).__name__
+        log.error("OpenAI advisor exception for %s: %s: %s", issue.key, name, str(e)[:200])
+        # Trip the circuit breaker on quota / auth / not-found type errors so
+        # subsequent calls don't waste 1-2 seconds each on the same failure.
+        if name in {"RateLimitError", "AuthenticationError", "NotFoundError",
+                    "PermissionDeniedError", "BadRequestError"}:
+            _disable(f"{name}: {str(e)[:120]}")
+            log.warning(
+                "OpenAI advisor circuit opened — subsequent sequence calls will use "
+                "the deterministic fallback for this session. Call reset_circuit() "
+                "to re-enable after fixing the key/quota."
+            )
         return None

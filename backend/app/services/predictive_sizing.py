@@ -13,6 +13,7 @@ Returns a PlanningResult with confidence score, risk level, carry-over risk,
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Iterable
 
@@ -22,6 +23,8 @@ from ..models import (
     PlanningResult,
     SimilarIssueEvidence,
 )
+
+log = logging.getLogger("sprintpilot.sizing")
 
 _FIBONACCI = [1, 2, 3, 5, 8, 13]
 _STOPWORDS = {
@@ -203,6 +206,12 @@ def _blocker_suggestions(issue: JiraIssue) -> list[str]:
 def predict_size(
     issue: JiraIssue, history: list[HistoricalIssue]
 ) -> PlanningResult:
+    log.info(
+        "predict_size %s priority=%s labels=%s components=%s has_ac=%s has_blocker=%s deps=%d history_pool=%d",
+        issue.key, issue.priority, issue.labels, issue.components,
+        bool(issue.acceptance_criteria), bool(issue.blocker_reason),
+        len(issue.dependencies), len(history),
+    )
     if history:
         scored = sorted(
             ((_similarity(issue, h), h) for h in history),
@@ -215,8 +224,18 @@ def predict_size(
     if top:
         total_weight = sum(max(s, 1e-3) for s, _ in top)
         weighted_avg = sum(max(s, 1e-3) * h.actual_size for s, h in top) / total_weight
+        log.info(
+            "predict_size %s top3=%s weighted_avg=%.2f",
+            issue.key,
+            [(h.key, round(s, 3), h.actual_size) for s, h in top],
+            weighted_avg,
+        )
     else:
         weighted_avg = issue.current_size or 5
+        log.warning(
+            "predict_size %s no history; using current_size=%s fallback",
+            issue.key, issue.current_size,
+        )
 
     adjustments: list[str] = []
     add = 0
@@ -243,6 +262,11 @@ def predict_size(
     confidence = _confidence(top, issue)
     risk = _classify_risk(predicted, confidence, issue)
     carry_over = _carry_over_risk(top, issue, predicted, confidence)
+    log.info(
+        "predict_size %s -> predicted=%d confidence=%d risk=%s carry_over=%d adjustments=+%d (%s)",
+        issue.key, predicted, confidence, risk, carry_over, add,
+        " | ".join(adjustments) or "none",
+    )
 
     similar_evidence = [
         SimilarIssueEvidence(

@@ -9,6 +9,7 @@ This module makes ONLY GET requests. No POST/PUT/DELETE to Jira ever.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -21,6 +22,8 @@ from requests.auth import HTTPBasicAuth
 from ..models import HistoricalIssue, JiraIssue
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+log = logging.getLogger("sprintpilot.jira")
 
 
 _PRIORITY_MAP = {
@@ -149,35 +152,56 @@ class JiraClient:
         return bool(self.url and self.token)
 
     def _get(self, path: str, params: dict | None = None) -> dict:
-        r = requests.get(
-            f"{self.url}{path}",
-            params=params,
-            auth=self.auth,
-            headers=self.headers,
-            verify=self.verify,
-            timeout=20,
+        full_url = f"{self.url}{path}"
+        log.info(
+            "Jira GET %s params=%s auth_mode=%s verify_ssl=%s",
+            full_url, params, self.mode, self.verify,
         )
+        try:
+            r = requests.get(
+                full_url,
+                params=params,
+                auth=self.auth,
+                headers=self.headers,
+                verify=self.verify,
+                timeout=20,
+            )
+        except requests.RequestException as e:
+            log.error("Jira request failed: %s: %s", type(e).__name__, e)
+            raise
+        log.info("Jira response %d %s", r.status_code, r.reason)
+        if r.status_code >= 400:
+            log.error("Jira error body (first 500 chars): %s", r.text[:500])
         r.raise_for_status()
         return r.json()
 
     def ping(self) -> JiraStatus:
         if not self.is_configured:
+            log.warning(
+                "Jira not configured: url=%s token_len=%d email=%s",
+                bool(self.url), len(self.token), bool(self.email),
+            )
             return JiraStatus(connected=False, reason="JIRA_URL or JIRA_API_TOKEN missing")
         try:
-            self._get("/rest/api/2/myself")
+            data = self._get("/rest/api/2/myself")
+            log.info("Jira ping OK as user=%s", data.get("name") or data.get("displayName"))
             return JiraStatus(connected=True)
         except Exception as e:
+            log.error("Jira ping failed: %s", e)
             return JiraStatus(connected=False, reason=str(e)[:140])
 
     def _search(self, jql: str, fields: str, max_results: int = 50) -> list[dict]:
         cache_key = f"search::{jql}::{fields}::{max_results}"
         if cache_key in self._cache:
+            log.info("Jira search cache hit (jql=%s)", jql[:120])
             return self._cache[cache_key]  # type: ignore[return-value]
+        log.info("Jira search JQL: %s (fields=%s, maxResults=%d)", jql, fields, max_results)
         data = self._get(
             "/rest/api/2/search",
             params={"jql": jql, "fields": fields, "maxResults": max_results},
         )
         issues = data.get("issues", [])
+        log.info("Jira search returned %d issue(s); total=%s", len(issues), data.get("total"))
         self._cache[cache_key] = issues
         return issues
 
@@ -190,13 +214,17 @@ class JiraClient:
             f'project = "{project_key}" AND statusCategory != Done '
             f"ORDER BY priority DESC, duedate ASC"
         )
+        log.info("fetch_backlog start project_key=%s", project_key)
         raw_issues = self._search(jql, fields, max_results=50)
-        return [self._map_jira_issue(r) for r in raw_issues]
+        mapped = [self._map_jira_issue(r) for r in raw_issues]
+        log.info("fetch_backlog returning %d mapped issues", len(mapped))
+        return mapped
 
     def fetch_historical(
         self, project_key: str, sprint_names: list[str]
     ) -> list[HistoricalIssue]:
         if not sprint_names:
+            log.warning("fetch_historical called with empty sprint_names list")
             return []
         fields = (
             "summary,description,priority,status,labels,components,"
@@ -207,19 +235,31 @@ class JiraClient:
             f'project = "{project_key}" AND sprint in ({sprint_list}) '
             f"AND statusCategory = Done"
         )
+        log.info(
+            "fetch_historical start project_key=%s sprints=%d",
+            project_key, len(sprint_names),
+        )
         raw_issues = self._search(jql, fields, max_results=100)
         mapped: list[HistoricalIssue] = []
+        skipped_no_sp = 0
         for r in raw_issues:
             h = self._map_historical(r)
             if h:
                 mapped.append(h)
+            else:
+                skipped_no_sp += 1
+        log.info(
+            "fetch_historical mapped %d issues (skipped %d without story points)",
+            len(mapped), skipped_no_sp,
+        )
         return mapped
 
     def get_issue(self, key: str) -> Optional[JiraIssue]:
         try:
             data = self._get(f"/rest/api/2/issue/{key}")
             return self._map_jira_issue(data)
-        except Exception:
+        except Exception as e:
+            log.error("get_issue(%s) failed: %s", key, e)
             return None
 
     # ─── Mapping helpers ──────────────────────────────────────────────────

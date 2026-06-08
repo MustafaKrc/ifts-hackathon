@@ -11,6 +11,7 @@ target assignee contact so the UI can render a "Copy message" preview.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date, datetime
 
@@ -20,6 +21,8 @@ from ..models import (
     SequencedSubTask,
     TaskNotification,
 )
+
+log = logging.getLogger("sprintpilot.notif")
 
 
 def _new_id() -> str:
