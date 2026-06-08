@@ -1,0 +1,14 @@
+frontend/src/AppLayout.jsx
+  h_85aec3fb918bc6 370,372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1f4f10156bb9c4f4e5b9484fd6a703949eab7d1c",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
