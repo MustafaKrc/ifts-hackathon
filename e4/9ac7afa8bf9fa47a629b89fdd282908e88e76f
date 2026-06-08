@@ -1,0 +1,118 @@
+backend/app/routers/backlog.py
+  s_06bd48f3f80f0a::t_97f5ad7a38e6d8 15
+frontend/src/pages/PlanningPage.jsx
+  s_06bd48f3f80f0a::t_2e9b11cf692934 1-38
+backend/app/integrations/jira_client.py
+  s_06bd48f3f80f0a::t_ed580ef0292ae6 113-114,122,124-125,131-141,150-154,157-160,162-165,167-173
+  s_06bd48f3f80f0a::t_eb24bd9062e66f 515-519,532,534-536
+  s_06bd48f3f80f0a::t_bfd71c1f3ee00d 201-202
+  s_06bd48f3f80f0a::t_f02f10d3acbf93 357-366,369-393,397
+  s_06bd48f3f80f0a::t_47a30e1bef4005 273-274,276,278-285,287-356,367,395,401-404,406-407,411,413-418,420,424-426
+  s_06bd48f3f80f0a::t_5d0ff8b47837a2 115-121,123,126-130,142-149,155-156,161,166,174-175
+  s_06bd48f3f80f0a::t_a6690969dc0dc5 22
+  s_06bd48f3f80f0a::t_d958bb1dfb9a04 485-487
+  s_06bd48f3f80f0a::t_93cfbbdeb19d09 466-467,488-489
+backend/app/models.py
+  s_06bd48f3f80f0a::t_5e26044c4e3bc0 71-73
+  s_06bd48f3f80f0a::t_e37d1b5c5009f7 320-325
+  s_06bd48f3f80f0a::t_c75328bfc72cd5 42-43,47-55
+  s_06bd48f3f80f0a::t_8a7ec478a628b6 234-245,254
+  s_06bd48f3f80f0a::t_d3256226d890b1 17-22,39-41,44-46
+  s_06bd48f3f80f0a::t_c20db4615751a2 86-106,111-114,122-134
+backend/app/services/decomposition_engine.py
+  s_06bd48f3f80f0a::t_b1c9f7a7101164 24
+  s_06bd48f3f80f0a::t_c90ac0f639ccad 105,109,112,117
+frontend/src/components/TaskDecompositionPanel.jsx
+  s_06bd48f3f80f0a::t_2a79827d45de9a 118-120,122
+  s_06bd48f3f80f0a::t_a75b3e53c64075 11-19,23-61
+frontend/src/pages/IssueWorkspacePage.jsx
+  s_06bd48f3f80f0a::t_7c602ce445ad59 1-107
+backend/app/routers/review.py
+  s_06bd48f3f80f0a::t_18b1de878489f9 7,24,38
+backend/app/main.py
+  s_06bd48f3f80f0a::t_2c34f012f76e45 44
+  s_06bd48f3f80f0a::t_c26dde5ce1c1e6 40
+  s_06bd48f3f80f0a::t_b026e26dc832a8 115
+  s_06bd48f3f80f0a::t_b2d08fb865adc0 116
+backend/app/services/historical_performance.py
+  s_06bd48f3f80f0a::t_54d1ddf472c460 1-150
+frontend/src/pages/BacklogPage.jsx
+  s_06bd48f3f80f0a::t_d16d5f3ff7ec1d 1-20
+.env.example
+  s_06bd48f3f80f0a::t_bf0e71e84e7218 7-11,14-16
+backend/app/routers/decompose.py
+  s_06bd48f3f80f0a::t_dc803b0a1e90a5 7,20,22
+backend/app/services/data_provider.py
+  s_06bd48f3f80f0a::t_76cfdcacfe210e 91,97,100,105,107,112-115,127-131,133-149,151-152,154,156-160,171-174
+  s_06bd48f3f80f0a::t_8cd298040988b0 27,37-43,48-55,60-78
+  s_06bd48f3f80f0a::t_c9136fc3877059 92-94,98-99,104,108-111
+  s_06bd48f3f80f0a::t_f6517758c49475 12,17
+backend/app/routers/sprints.py
+  s_06bd48f3f80f0a::t_8dd009721bc8cf 1-15
+backend/app/services/sprint_health_engine.py
+  s_06bd48f3f80f0a::t_2d9709bcef595b 238-278,290
+  s_06bd48f3f80f0a::t_231c26bd17cdcc 18
+frontend/src/pages/SimulatorPage.jsx
+  s_06bd48f3f80f0a::t_06bb521552c4ae 1-16
+backend/app/data/mock_team.py
+  s_06bd48f3f80f0a::t_116c4f171a2d3f 2,4-8,11-22,26,30-38,44,48-54,60,64-71,77,81-87,93,97-103,109,113-119
+frontend/src/main.jsx
+  s_06bd48f3f80f0a::t_16b91eed91aa74 3,7,15-17
+frontend/src/components/BacklogPanel.jsx
+  s_06bd48f3f80f0a::t_67f95a8a0b49dc 1,11-14,21-25,38-46,54-59,87,92-93,116-120,125,148-149,151-152,154-157,171-183,197-200,202-203,208-217,219-220,222-225,231,240,242-243,245-258,260-261,263-267,272-273,277-279,284-286,292,304,316-328,334-342,344-352,363,366-412,415
+  s_06bd48f3f80f0a::t_3292ab47016eda 26
+  s_06bd48f3f80f0a::t_a0d4429c59226d 305-315,329-333,343,353-362,364-365
+  s_06bd48f3f80f0a::t_d5bf162cc4a213 259,262
+  s_06bd48f3f80f0a::t_a8d0f9db10d601 61-71,74-76,88-91
+  s_06bd48f3f80f0a::t_83087c552cd96f 47-53
+  s_06bd48f3f80f0a::t_ff2bb757941997 150,153,158-170,184-196,201,204-207,218,221,226-230
+  s_06bd48f3f80f0a::t_7d6316bcae3ce9 241,244
+backend/app/routers/sequence.py
+  s_06bd48f3f80f0a::t_3bafab373dfbea 7,22,25
+frontend/src/AppLayout.jsx
+  s_06bd48f3f80f0a::t_abe6de1e7887d7 1-294,296-406
+  s_06bd48f3f80f0a::t_64c6ec13e1c12d 295
+frontend/src/AppRouter.jsx
+  s_06bd48f3f80f0a::t_705448f00ad654 1-26
+frontend/src/pages/SprintReviewPage.jsx
+  s_06bd48f3f80f0a::t_77701e1703a648 1-16
+backend/app/routers/team_performance.py
+  s_06bd48f3f80f0a::t_c4021f275c4592 1-17
+backend/app/routers/simulate.py
+  s_06bd48f3f80f0a::t_8fa3ead8263e9e 7,23,37
+frontend/src/components/SprintReviewPanel.jsx
+  s_06bd48f3f80f0a::t_7a692bf1c36c0a 18-20
+  s_06bd48f3f80f0a::t_b3fcbb1d3dc9c2 98-177
+  s_06bd48f3f80f0a::t_4f61ef0718d9e9 258-259
+frontend/src/pages/NotificationsPage.jsx
+  s_06bd48f3f80f0a::t_581e5831ead6ab 1-14
+frontend/src/api/client.js
+  s_06bd48f3f80f0a::t_3aac8392281062 30
+  s_06bd48f3f80f0a::t_da718b99eafb65 29
+frontend/src/styles/theme.css
+  s_06bd48f3f80f0a::t_62aa3223c2e2f6 27,29,31-32,35-38,41-81,83-96,99-102,104,106,108-109,111-115,121,123-125,128-152
+  s_06bd48f3f80f0a::t_a1f95d2bfa94b2 155-190,193-206,209-220
+backend/app/services/assignment_engine.py
+  s_06bd48f3f80f0a::t_3b872af38b748e 4-16,24,37-41,46-61,71-113,116-122,124-137,139,142,144,146-156,158-159,161,163-175,177,179-181,183,197-200,210-216,220,222,224-228,234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e49ac7afa8bf9fa47a629b89fdd282908e88e76f",
+  "prompts": {},
+  "humans": {
+    "h_85aec3fb918bc6": {
+      "author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd48f3f80f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abf822ea-d69c-4373-a517-9916f5bb4eb5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Mustafa Kırcı <mustafa.kirci0@gmail.com>"
+    }
+  }
+}
