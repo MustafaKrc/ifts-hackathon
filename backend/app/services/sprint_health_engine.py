@@ -1,0 +1,225 @@
+"""
+Sprint health scoring based on the spec section 9.5 formula.
+
+Score starts at 100 and is deducted for overcommitment, high-risk issues,
+blockers, low confidence, carry-over risk, overloaded members, long critical
+paths, deadline risk, and squeezed test windows. Result is normalised to
+[1, 100] and mapped to a verdict (Healthy / Risky / Overcommitted).
+"""
+
+from __future__ import annotations
+
+from datetime import date
+
+from ..data.mock_team import find_by_id, get_team
+from ..models import (
+    CapacityInfo,
+    JiraIssue,
+    PlanningResult,
+    SprintHealth,
+    TaskSequenceResult,
+)
+
+
+def _team_capacity() -> int:
+    return sum(m.capacity - m.current_load for m in get_team())
+
+
+def _capacity_breakdown(
+    sequences: list[TaskSequenceResult],
+) -> list[CapacityInfo]:
+    allocations: dict[str, int] = {}
+    for seq in sequences:
+        for st in seq.ordered_subtasks:
+            allocations[st.suggested_assignee_id] = (
+                allocations.get(st.suggested_assignee_id, 0) + st.estimated_size
+            )
+    infos: list[CapacityInfo] = []
+    for m in get_team():
+        allocated = allocations.get(m.id, 0)
+        total_load = m.current_load + allocated
+        utilization = int(round((total_load / max(m.capacity, 1)) * 100))
+        infos.append(
+            CapacityInfo(
+                member_id=m.id,
+                member_name=m.name,
+                role=m.role,
+                capacity=m.capacity,
+                current_load=m.current_load,
+                allocated_in_sprint=allocated,
+                utilization_percent=utilization,
+            )
+        )
+    return infos
+
+
+def _generate_review_summary(
+    issues: list[JiraIssue],
+    plannings: list[PlanningResult],
+    verdict: str,
+    score: int,
+) -> str:
+    total_planned = sum((p.original_size or 0) for p in plannings)
+    total_predicted = sum(p.predicted_size for p in plannings)
+    high_risk = [p for p in plannings if p.risk_level == "High"]
+    lines = [
+        f"This sprint contains {len(issues)} selected issue(s) totalling "
+        f"{total_planned} planned points and {total_predicted} predicted points.",
+        f"Sprint health: {score}/100 — verdict: {verdict}.",
+    ]
+    if high_risk:
+        keys = ", ".join(p.issue_key for p in high_risk)
+        lines.append(f"High-risk issues identified: {keys}.")
+    if total_predicted > total_planned + 3:
+        lines.append(
+            f"Predicted effort exceeds planned by {total_predicted - total_planned} SP "
+            "— overcommitment likely without scope changes."
+        )
+    return " ".join(lines)
+
+
+def _generate_decision_receipt(
+    issues: list[JiraIssue],
+    plannings: list[PlanningResult],
+    score: int,
+    verdict: str,
+    risks: list[str],
+    actions: list[str],
+) -> str:
+    bullets = [
+        "SPRINT DECISION RECEIPT",
+        f"Verdict: {verdict} | Health: {score}/100",
+        f"Issues: {', '.join(i.key for i in issues)}",
+        f"Total predicted: {sum(p.predicted_size for p in plannings)} SP",
+        "Key risks:",
+    ]
+    bullets += [f"  - {r}" for r in (risks or ["None"])][:5]
+    bullets.append("Recommended actions:")
+    bullets += [f"  - {a}" for a in (actions or ["Proceed as planned"])][:5]
+    return "\n".join(bullets)
+
+
+def compute_sprint_health(
+    issues: list[JiraIssue],
+    plannings: list[PlanningResult],
+    sequences: list[TaskSequenceResult],
+) -> SprintHealth:
+    planned_total = sum((p.original_size or 0) for p in plannings)
+    predicted_total = sum(p.predicted_size for p in plannings)
+    capacity = _team_capacity()
+
+    risks: list[str] = []
+    actions: list[str] = []
+    score = 100
+
+    if predicted_total > capacity and capacity > 0:
+        score -= 25
+        risks.append(
+            f"Predicted effort {predicted_total} SP exceeds remaining team "
+            f"capacity {capacity} SP."
+        )
+        actions.append("Reduce scope or split the largest risky issue.")
+
+    high_risk = [p for p in plannings if p.risk_level == "High"]
+    score -= 8 * len(high_risk)
+    if high_risk:
+        risks.append(
+            f"{len(high_risk)} high-risk issue(s): {', '.join(p.issue_key for p in high_risk)}"
+        )
+
+    blocked_issues = [i for i in issues if i.blocker_reason or i.status == "Blocked"]
+    score -= 10 * len(blocked_issues)
+    if blocked_issues:
+        risks.append(
+            f"{len(blocked_issues)} issue(s) blocked: "
+            f"{', '.join(i.key for i in blocked_issues)}"
+        )
+        actions.append("Unblock or de-scope blocked issues before sprint starts.")
+
+    low_confidence = [p for p in plannings if p.confidence < 55]
+    score -= 6 * len(low_confidence)
+    if low_confidence:
+        risks.append(
+            f"{len(low_confidence)} issue(s) sized with low confidence."
+        )
+        actions.append("Run a brief analysis spike on low-confidence issues.")
+
+    avg_carry_over = (
+        sum(p.carry_over_risk for p in plannings) / max(len(plannings), 1)
+    )
+    if avg_carry_over >= 50:
+        score -= 10
+        risks.append(f"Average carry-over risk is {int(avg_carry_over)}%.")
+        actions.append("Plan smaller vertical slices to reduce carry-over risk.")
+
+    capacity_info = _capacity_breakdown(sequences)
+    overloaded = [c for c in capacity_info if c.utilization_percent >= 90]
+    score -= 8 * len(overloaded)
+    for c in overloaded:
+        risks.append(
+            f"{c.member_name} is at {c.utilization_percent}% utilization."
+        )
+        actions.append(f"Reassign work away from {c.member_name}.")
+
+    longest_path = 0
+    for seq in sequences:
+        longest_path = max(longest_path, len(seq.critical_path))
+    if longest_path >= 4:
+        score -= 8
+        risks.append(
+            f"Critical path is {longest_path} tasks deep — long serial chain."
+        )
+        actions.append("Parallelise non-blocking tasks where possible.")
+
+    near_deadline_not_ready = 0
+    for seq in sequences:
+        for st in seq.ordered_subtasks:
+            if (
+                st.deadline
+                and (st.deadline - date.today()).days <= 2
+                and st.status == "Not Ready"
+            ):
+                near_deadline_not_ready += 1
+    if near_deadline_not_ready:
+        score -= 10
+        risks.append(
+            f"{near_deadline_not_ready} task(s) have a deadline within 2 days but are Not Ready."
+        )
+
+    test_squeeze = False
+    for seq in sequences:
+        if any("Test is at risk" in r for r in seq.schedule_risks):
+            test_squeeze = True
+            break
+    if test_squeeze:
+        score -= 10
+        risks.append("Test window is squeezed by remaining development workload.")
+        actions.append("Move part of a large task to next sprint to free QA time.")
+
+    score = max(1, min(100, score))
+    if score >= 75:
+        verdict = "Healthy"
+    elif score >= 50:
+        verdict = "Risky"
+    else:
+        verdict = "Overcommitted"
+
+    if not actions:
+        actions.append("Proceed with this sprint plan as scoped.")
+
+    summary = _generate_review_summary(issues, plannings, verdict, score)
+    receipt = _generate_decision_receipt(issues, plannings, score, verdict, risks, actions)
+
+    return SprintHealth(
+        score=score,
+        verdict=verdict,  # type: ignore[arg-type]
+        planned_points=planned_total,
+        predicted_points=predicted_total,
+        capacity=capacity,
+        capacity_by_member=capacity_info,
+        carry_over_risk=int(avg_carry_over),
+        risks=risks,
+        recommended_actions=actions,
+        review_summary=summary,
+        decision_receipt=receipt,
+    )

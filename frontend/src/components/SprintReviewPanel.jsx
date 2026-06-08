@@ -1,0 +1,180 @@
+import React from "react";
+import {
+  Card,
+  Button,
+  Statistic,
+  Progress,
+  Space,
+  Tag,
+  Alert,
+  Typography,
+  Empty,
+} from "antd";
+import {
+  HeartOutlined,
+  FundOutlined,
+  TeamOutlined,
+  FileTextOutlined,
+} from "@ant-design/icons";
+
+const { Title, Text, Paragraph } = Typography;
+
+const VERDICT_COLORS = {
+  Healthy: "success",
+  Risky: "warning",
+  Overcommitted: "error",
+};
+
+function HealthCard({ review }) {
+  return (
+    <Card type="inner" className="sp-health-card">
+      <Statistic
+        title="Sprint Health"
+        value={review.score}
+        suffix="/ 100"
+        styles={{ value: { color: review.score >= 75 ? "#28A745" : review.score >= 50 ? "#FF6B35" : "#DC3545" } }}
+        prefix={<HeartOutlined />}
+      />
+      <Tag color={VERDICT_COLORS[review.verdict]} className="sp-verdict-tag">
+        {review.verdict}
+      </Tag>
+      <div className="sp-health-row">
+        <div>
+          <Text type="secondary">Planned</Text>
+          <div>{review.planned_points} SP</div>
+        </div>
+        <div>
+          <Text type="secondary">Predicted</Text>
+          <div>{review.predicted_points} SP</div>
+        </div>
+        <div>
+          <Text type="secondary">Free capacity</Text>
+          <div>{review.capacity} SP</div>
+        </div>
+        <div>
+          <Text type="secondary">Avg carry-over</Text>
+          <div>{review.carry_over_risk}%</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function CapacityPanel({ rows }) {
+  return (
+    <Card type="inner" title={<><TeamOutlined /> Capacity by team member</>}>
+      <div className="sp-capacity-list">
+        {rows.map((r) => (
+          <div key={r.member_id} className="sp-capacity-row">
+            <div className="sp-capacity-name">
+              <Text strong>{r.member_name}</Text>{" "}
+              <Text type="secondary">({r.role})</Text>
+            </div>
+            <Progress
+              percent={Math.min(r.utilization_percent, 120)}
+              size="small"
+              strokeColor={
+                r.utilization_percent >= 100
+                  ? "#DC3545"
+                  : r.utilization_percent >= 85
+                  ? "#FF6B35"
+                  : "#28A745"
+              }
+              format={(p) => `${r.utilization_percent}%`}
+            />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              load {r.current_load} + sprint {r.allocated_in_sprint} / cap {r.capacity}
+            </Text>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function DecisionReceipt({ text }) {
+  return (
+    <Card
+      type="inner"
+      title={<><FileTextOutlined /> Sprint Decision Receipt</>}
+      className="sp-receipt"
+    >
+      <pre className="sp-receipt-pre">{text}</pre>
+    </Card>
+  );
+}
+
+export default function SprintReviewPanel({
+  review,
+  onReview,
+  canReview,
+  loading,
+}) {
+  return (
+    <Card
+      className="sp-section"
+      title={<><FundOutlined /> 7. Sprint Review Dashboard</>}
+      extra={
+        <Button
+          type="primary"
+          onClick={onReview}
+          disabled={!canReview || loading}
+          loading={loading}
+        >
+          Generate Sprint Review
+        </Button>
+      }
+    >
+      {!review ? (
+        <Empty description="Select issues above and click Generate Sprint Review." />
+      ) : (
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <HealthCard review={review} />
+
+          <Alert
+            type="info"
+            title="AI sprint review summary"
+            description={review.review_summary}
+            showIcon
+          />
+
+          {review.risks?.length > 0 && (
+            <Alert
+              type="warning"
+              title="Top sprint risks"
+              description={
+                <ul className="sp-bullet-list">
+                  {review.risks.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              }
+              showIcon
+            />
+          )}
+
+          {review.recommended_actions?.length > 0 && (
+            <Alert
+              type="success"
+              title="Recommended actions"
+              description={
+                <ul className="sp-bullet-list">
+                  {review.recommended_actions.map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
+                </ul>
+              }
+              showIcon
+            />
+          )}
+
+          {review.capacity_by_member?.length > 0 && (
+            <CapacityPanel rows={review.capacity_by_member} />
+          )}
+
+          <DecisionReceipt text={review.decision_receipt} />
+        </Space>
+      )}
+    </Card>
+  );
+}
